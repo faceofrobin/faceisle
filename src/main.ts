@@ -48,7 +48,8 @@ async function main(): Promise<void> {
   const boot = new BootScreen();
   await yieldPaint();
 
-  const seed = parseSeed(params.get("seed")) ?? (Math.random() * 4294967296) >>> 0;
+  const seed =
+    parseSeed(params.get("seed")) ?? (Math.random() * 4294967296) >>> 0;
   const tParam = params.get("t");
   const yawParam = params.get("yaw");
   const pitchParam = params.get("pitch");
@@ -168,6 +169,7 @@ async function main(): Promise<void> {
   await yieldPaint();
 
   const settings = new SettingsMenu(document.getElementById("settings")!, {
+    seed,
     touchMode,
     onApply: (v) => {
       audio.setMaster(v.master);
