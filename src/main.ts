@@ -266,7 +266,7 @@ async function main(): Promise<void> {
   fog.color.copy(day.horizon);
   controls.update(0);
   sky.update(day, camera.position, 0, 0, weather);
-  water.update(0, day, fog, camera.position);
+  water.update(0, day, fog);
   vegetation.update(0, day, fog);
   post.render(renderer, scene, camera, title.visible ? title.scene : null);
 
@@ -342,7 +342,7 @@ async function main(): Promise<void> {
     fog.color.multiply(haze);
 
     sky.update(day, camera.position, time, dt, weather);
-    water.update(time, day, fog, camera.position);
+    water.update(time, day, fog);
     vegetation.update(time, day, fog);
     creatures.update(dt, time, day, controls.position, camera.rotation.y);
 

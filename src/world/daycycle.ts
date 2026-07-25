@@ -21,15 +21,15 @@ interface Keyframe {
 }
 
 const KEYS: Keyframe[] = [
-  { t: 0.00, skyTop: 0x141a45, horizon: 0x2c3a6e, light: 0xb6c2f0, lightI: 0.4, hemiSky: 0x46538c, hemiGround: 0x2a3158, cloud: 0x3c4a7e, waterDeep: 0x1c2a56, waterLight: 0x32447e, tint: 0x525c8c, star: 1.0 },
-  { t: 0.20, skyTop: 0x2c3468, horizon: 0x6e5f92, light: 0xaab6e8, lightI: 0.28, hemiSky: 0x5e68a4, hemiGround: 0x343a64, cloud: 0x6f6890, waterDeep: 0x23305e, waterLight: 0x4a4f86, tint: 0x666a92, star: 0.55 },
-  { t: 0.26, skyTop: 0x5a6ab2, horizon: 0xffbe8e, light: 0xffc890, lightI: 0.78, hemiSky: 0xb2aede, hemiGround: 0x6e6c54, cloud: 0xffccb0, waterDeep: 0x2c4a7e, waterLight: 0xd89a78, tint: 0xe8c8ae, star: 0.0 },
-  { t: 0.33, skyTop: 0x55a2e2, horizon: 0xcfe8ef, light: 0xfff0d0, lightI: 1.05, hemiSky: 0xb8d4ea, hemiGround: 0x6e8a58, cloud: 0xffffff, waterDeep: 0x2e6aae, waterLight: 0x6ab8dc, tint: 0xffffff, star: 0.0 },
-  { t: 0.50, skyTop: 0x3f97e8, horizon: 0xbfe6f2, light: 0xfff6e0, lightI: 1.15, hemiSky: 0xc2ddf0, hemiGround: 0x74925c, cloud: 0xffffff, waterDeep: 0x2e74c2, waterLight: 0x7fc8e8, tint: 0xffffff, star: 0.0 },
-  { t: 0.66, skyTop: 0x4a8ed8, horizon: 0xe8e2b8, light: 0xffe8b0, lightI: 1.0, hemiSky: 0xb0cce2, hemiGround: 0x6e8a58, cloud: 0xfff4dc, waterDeep: 0x2e6ab2, waterLight: 0x88bcd8, tint: 0xfff2d8, star: 0.0 },
-  { t: 0.74, skyTop: 0x6a5fae, horizon: 0xff9660, light: 0xff9a58, lightI: 0.8, hemiSky: 0xb89ecc, hemiGround: 0x746456, cloud: 0xffb48e, waterDeep: 0x35427e, waterLight: 0xe08a64, tint: 0xf0bc96, star: 0.0 },
-  { t: 0.80, skyTop: 0x3a3878, horizon: 0xb06a80, light: 0xc88ba8, lightI: 0.42, hemiSky: 0x7268aa, hemiGround: 0x3e3a5e, cloud: 0x8a6a92, waterDeep: 0x262f62, waterLight: 0x7a5a80, tint: 0x92809e, star: 0.35 },
-  { t: 0.87, skyTop: 0x141a45, horizon: 0x2c3a6e, light: 0xb6c2f0, lightI: 0.4, hemiSky: 0x46538c, hemiGround: 0x2a3158, cloud: 0x3c4a7e, waterDeep: 0x1c2a56, waterLight: 0x32447e, tint: 0x525c8c, star: 1.0 },
+  { t: 0.00, skyTop: 0x141a45, horizon: 0x2c3a6e, light: 0xb6c2f0, lightI: 0.4, hemiSky: 0x46538c, hemiGround: 0x2a3158, cloud: 0x3c4a7e, waterDeep: 0x16323a, waterLight: 0x24484e, tint: 0x525c8c, star: 1.0 },
+  { t: 0.20, skyTop: 0x2c3468, horizon: 0x6e5f92, light: 0xaab6e8, lightI: 0.28, hemiSky: 0x5e68a4, hemiGround: 0x343a64, cloud: 0x6f6890, waterDeep: 0x1d3c42, waterLight: 0x315258, tint: 0x666a92, star: 0.55 },
+  { t: 0.26, skyTop: 0x5a6ab2, horizon: 0xffbe8e, light: 0xffc890, lightI: 0.78, hemiSky: 0xb2aede, hemiGround: 0x6e6c54, cloud: 0xffccb0, waterDeep: 0x2a5a5c, waterLight: 0xc08a72, tint: 0xe8c8ae, star: 0.0 },
+  { t: 0.33, skyTop: 0x55a2e2, horizon: 0xcfe8ef, light: 0xfff0d0, lightI: 1.05, hemiSky: 0xb8d4ea, hemiGround: 0x6e8a58, cloud: 0xffffff, waterDeep: 0x2d8078, waterLight: 0x63b39e, tint: 0xffffff, star: 0.0 },
+  { t: 0.50, skyTop: 0x3f97e8, horizon: 0xbfe6f2, light: 0xfff6e0, lightI: 1.15, hemiSky: 0xc2ddf0, hemiGround: 0x74925c, cloud: 0xffffff, waterDeep: 0x2e8a80, waterLight: 0x6cbca4, tint: 0xffffff, star: 0.0 },
+  { t: 0.66, skyTop: 0x4a8ed8, horizon: 0xe8e2b8, light: 0xffe8b0, lightI: 1.0, hemiSky: 0xb0cce2, hemiGround: 0x6e8a58, cloud: 0xfff4dc, waterDeep: 0x2f8474, waterLight: 0x8cc09c, tint: 0xfff2d8, star: 0.0 },
+  { t: 0.74, skyTop: 0x6a5fae, horizon: 0xff9660, light: 0xff9a58, lightI: 0.8, hemiSky: 0xb89ecc, hemiGround: 0x746456, cloud: 0xffb48e, waterDeep: 0x36585c, waterLight: 0xd08a66, tint: 0xf0bc96, star: 0.0 },
+  { t: 0.80, skyTop: 0x3a3878, horizon: 0xb06a80, light: 0xc88ba8, lightI: 0.42, hemiSky: 0x7268aa, hemiGround: 0x3e3a5e, cloud: 0x8a6a92, waterDeep: 0x253f48, waterLight: 0x6c5c68, tint: 0x92809e, star: 0.35 },
+  { t: 0.87, skyTop: 0x141a45, horizon: 0x2c3a6e, light: 0xb6c2f0, lightI: 0.4, hemiSky: 0x46538c, hemiGround: 0x2a3158, cloud: 0x3c4a7e, waterDeep: 0x16323a, waterLight: 0x24484e, tint: 0x525c8c, star: 1.0 },
 ];
 
 export class DayCycle {

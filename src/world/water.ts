@@ -19,6 +19,25 @@ void main() {
 }
 `;
 
+/**
+ * Water, painted rather than simulated.
+ *
+ * A pond in this style is one flat colour. A sea is three or four: a pale
+ * shelf hugging the land, the deep beyond it, and a step or two of haze on the
+ * way to the horizon — each one a solid tone with a hard edge, none of them
+ * blending into the next. There is no undulating light field, no fresnel, no
+ * sun path and no glitter, because none of those things survive being flat:
+ * they are all gradients, and a gradient on water is the one thing that drags
+ * the whole island back toward looking rendered.
+ *
+ * Two details carry all of it:
+ *
+ *  - The coastline is decided per chunky cell, so it comes out as stair-
+ *    stepped teeth. That ragged edge is most of what reads as "hand-drawn".
+ *  - Sparse white dashes, a hand's width each, drifting slowly. They are the
+ *    only moving thing on the surface and the only pixels that aren't one of
+ *    the four flat tones.
+ */
 const FRAG = `
 uniform vec3 uDeep;
 uniform vec3 uLight;
@@ -27,10 +46,6 @@ uniform vec3 uFogColor;
 uniform float uFogNear;
 uniform float uFogFar;
 uniform float uTime;
-uniform vec3 uSunDir;
-uniform vec3 uSunColor;
-uniform float uGlitter;
-uniform vec2 uCamPos;
 uniform sampler2D uHeight;
 uniform float uInvExtent;
 varying vec3 vWorld;
@@ -44,36 +59,43 @@ float hash(vec2 p) {
 void main() {
   vec2 p = vWorld.xz;
 
-  vec2 pc = floor(p * 0.85) / 0.85;
-
-  vec2 huv = clamp(p * uInvExtent * 0.5 + 0.5, 0.0, 1.0);
+  // Chunky cells, and a random shove of a couple of metres per cell. The shove
+  // moves the point we *ask the depth map about* — not the depth we compare it
+  // to. That distinction is the whole coastline: offsetting the position gives
+  // teeth a fixed couple of metres wide whether the beach shelves steeply or
+  // runs out flat for fifty, while offsetting the depth smears the edge into a
+  // field of speckle everywhere the bottom is gentle.
+  vec2 cell = floor(p / 2.2);
+  vec2 wob = (vec2(hash(cell), hash(cell + 17.3)) - 0.5) * 3.4;
+  vec2 huv = clamp((p + wob) * uInvExtent * 0.5 + 0.5, 0.0, 1.0);
   float th = texture2D(uHeight, huv).r * ${HEIGHT_RANGE}.0 - ${HEIGHT_RANGE / 2}.0;
   float depth = -th;
 
+  // One flat colour. No pale shallow band: Proteus's water meets the sand on a
+  // hard edge and stays the same tone right up to it, and the moment you add a
+  // lighter rim the sea starts looking lit rather than painted.
+  vec3 col = uDeep;
+  float open = step(1.1, depth);
 
-  float rimJit = (hash(pc * 1.3) - 0.5) * 0.5;
-  float shallow = 1.0 - smoothstep(0.55, 1.15 + rimJit, depth);
-  vec3 col = mix(uDeep, mix(uDeep, uLight, 0.72), shallow);
+  // Only the far distance moves off that tone, and then in flat steps rather
+  // than a wash — the boundaries nudged per cell so the rings read as drawn
+  // edges instead of the contour lines they really are.
+  vec3 far = mix(uLight, uHorizon, 0.55);
+  float band = floor(clamp((vFogDepth + (hash(cell + 5.1) - 0.5) * 14.0) / 130.0, 0.0, 2.0));
+  col = mix(col, far, band * 0.13);
 
-
-  float w1 = sin(pc.x * 0.020 + pc.y * 0.006 + uTime * 0.11);
-  float w2 = sin(pc.y * 0.016 - pc.x * 0.004 - uTime * 0.08);
-  float und = (w1 + w2 * 0.8) * 0.5 + 0.5;
-  float open = smoothstep(0.3, 1.5, depth);
-  float nearFade = 1.0 - smoothstep(65.0, 230.0, vFogDepth);
-  col = mix(col, mix(uDeep, uLight, 0.5), und * 0.16 * open * nearFade);
-
-
-  float distWash = smoothstep(40.0, 200.0, vFogDepth);
-  col = mix(col, mix(uLight, uHorizon, 0.72), distWash * 0.4 * open);
-
-
-  vec2 toFrag = p - uCamPos;
-  vec2 dirF = toFrag / max(length(toFrag), 0.001);
-  vec2 sunAz = normalize(uSunDir.xz + vec2(1e-5, 0.0));
-  float lane = pow(max(dot(dirF, sunAz), 0.0), 5.0);
-  col = mix(col, mix(col, uSunColor, 0.6), lane * uGlitter * 0.3 * open);
-
+  // Foam: short bright dashes on open water, drifting a fraction of a metre a
+  // second. The only moving thing on the surface, and the only pixels that
+  // aren't one of the flat tones.
+  vec2 dp = vec2(p.x * 0.42, p.y * 0.22) + vec2(uTime * 0.05, 0.0);
+  vec2 dloc = fract(dp);
+  float dash = step(0.94, hash(floor(dp)))
+             * step(dloc.x, 0.5)
+             * step(abs(dloc.y - 0.5), 0.06);
+  // Foam is the day's own light, pushed up until it clips — white at noon,
+  // cream at sunset, a dull blue-grey at midnight. Mixing toward pure white
+  // instead would leave the sea glowing after dark.
+  col = mix(col, min(vec3(1.0), uLight * 1.9), dash * open);
 
   float f = clamp((vFogDepth - uFogNear) / (uFogFar - uFogNear), 0.0, 1.0);
   gl_FragColor = vec4(snapFlat(mix(col, uFogColor, f)), 1.0);
@@ -98,10 +120,6 @@ export class Water {
         uFogNear: { value: 40 },
         uFogFar: { value: 320 },
         uTime: { value: 0 },
-        uSunDir: { value: new THREE.Vector3(0, 1, 0) },
-        uSunColor: { value: new THREE.Color() },
-        uGlitter: { value: 0 },
-        uCamPos: { value: new THREE.Vector2() },
         uHeight: { value: heightTex },
         uInvExtent: { value: 1 / HEIGHT_EXTENT },
       },
@@ -146,12 +164,13 @@ export class Water {
     return tex;
   }
 
-  update(
-    time: number,
-    day: DayCycle,
-    fog: THREE.Fog,
-    camPos: THREE.Vector3,
-  ): void {
+  /**
+   * The surface takes its whole palette from the day cycle — `waterDeep` and
+   * `waterLight` already swing warm at dawn and near-black at midnight, so the
+   * sea changes colour through the day without the shader knowing where the
+   * sun is.
+   */
+  update(time: number, day: DayCycle, fog: THREE.Fog): void {
     const u = this.mat.uniforms;
     u.uTime.value = time;
     (u.uDeep.value as THREE.Color).copy(day.waterDeep);
@@ -160,10 +179,5 @@ export class Water {
     (u.uFogColor.value as THREE.Color).copy(fog.color);
     u.uFogNear.value = fog.near;
     u.uFogFar.value = fog.far;
-    (u.uSunDir.value as THREE.Vector3).copy(day.sunDir);
-    (u.uSunColor.value as THREE.Color).copy(day.light);
-    (u.uCamPos.value as THREE.Vector2).set(camPos.x, camPos.z);
-    const sunLow = THREE.MathUtils.clamp(1 - day.sunDir.y * 3.4, 0, 1);
-    u.uGlitter.value = day.daylight * (0.12 + 0.88 * sunLow);
   }
 }
