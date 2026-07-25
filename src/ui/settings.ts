@@ -22,15 +22,10 @@ export const DEFAULT_SETTINGS: SettingsValues = {
 };
 
 export interface SettingsOptions {
-  seed: number;
   /** When true, show touch control copy instead of keyboard/mouse. */
   touchMode?: boolean;
   onApply: (v: SettingsValues) => void;
   onOpenChange: (open: boolean) => void;
-}
-
-export function seedName(seed: number): string {
-  return (seed >>> 0).toString(16).padStart(8, "0").toUpperCase();
 }
 
 function clamp(n: number, lo: number, hi: number): number {
@@ -68,16 +63,15 @@ function sliderField(
     </div>`;
 }
 
-type SettingsScreen = "island" | "controls" | "sound";
+type SettingsScreen = "sound" | "controls";
 
 const SCREENS: readonly {
   id: SettingsScreen;
   label: string;
   shortLabel: string;
 }[] = [
-  { id: "island", label: "This island", shortLabel: "Island" },
-  { id: "controls", label: "Controls", shortLabel: "Controls" },
   { id: "sound", label: "Sound", shortLabel: "Sound" },
+  { id: "controls", label: "Controls", shortLabel: "Controls" },
 ];
 
 const COMPACT_MQ = "(max-width: 40rem), (max-height: 32rem)";
@@ -121,25 +115,22 @@ const MARKUP = `
       <section
         class="set-pane"
         role="tabpanel"
-        id="set-pane-island"
-        aria-labelledby="set-tab-island"
+        id="set-pane-sound"
+        aria-labelledby="set-tab-sound"
         tabindex="0"
       >
-        <h3 class="set-h" id="set-h-island">This island</h3>
-        <p class="set-note" id="set-seed-help">
-          Every island grows from a single number. Keep it to walk this one again,
-          or pass it on so someone else can.
+        <h3 class="set-h" id="set-h-sound">Sound</h3>
+        <p class="set-note">
+          Levels apply for this visit only. Closing the tab starts fresh.
         </p>
-        <div class="set-field">
-          <label class="set-label" for="set-seed">Island seed</label>
-          <input class="set-input" id="set-seed" type="text" readonly spellcheck="false"
-                 autocomplete="off" aria-describedby="set-seed-help">
-        </div>
-        <div class="set-btn-row">
-          <button type="button" class="set-btn" id="set-copy-seed">Copy seed</button>
-          <button type="button" class="set-btn" id="set-copy-link">Copy link</button>
-          <button type="button" class="set-btn" id="set-new">New island</button>
-        </div>
+        ${sliderField("set-master", "Master", "Quieter", "Louder", "80%")}
+        ${sliderField("set-music", "Music", "Quieter music", "Louder music", "100%")}
+        ${sliderField("set-sfx", "Effects", "Quieter effects", "Louder effects", "100%")}
+        <label class="set-check" for="set-muted">
+          <input type="checkbox" id="set-muted">
+          <span class="set-box" aria-hidden="true"></span>
+          <span class="set-check-text">Mute</span>
+        </label>
       </section>
 
       <section
@@ -176,33 +167,10 @@ const MARKUP = `
           <li><kbd>Esc</kbd> — open or close this menu</li>
         </ul>
       </section>
-
-      <section
-        class="set-pane"
-        role="tabpanel"
-        id="set-pane-sound"
-        aria-labelledby="set-tab-sound"
-        tabindex="0"
-        hidden
-      >
-        <h3 class="set-h" id="set-h-sound">Sound</h3>
-        <p class="set-note">
-          Levels apply for this visit only. Closing the tab starts fresh.
-        </p>
-        ${sliderField("set-master", "Master", "Quieter", "Louder", "80%")}
-        ${sliderField("set-music", "Music", "Quieter music", "Louder music", "100%")}
-        ${sliderField("set-sfx", "Effects", "Quieter effects", "Louder effects", "100%")}
-        <label class="set-check" for="set-muted">
-          <input type="checkbox" id="set-muted">
-          <span class="set-box" aria-hidden="true"></span>
-          <span class="set-check-text">Mute</span>
-        </label>
-      </section>
     </div>
   </div>
 
   <div class="set-foot">
-    <p class="set-status" id="set-status" role="status" aria-live="polite"></p>
     <button type="button" class="set-btn set-btn-go" id="set-done">Back to the island</button>
   </div>
 </div>
@@ -216,15 +184,11 @@ const BUS_KEYS = ["master", "music", "sfx"] as const;
 export class SettingsMenu {
   private root: HTMLElement;
   private panel: HTMLElement;
-  private status: HTMLElement;
   private values: SettingsValues;
   private opts: SettingsOptions;
   private open = false;
   private returnFocus: HTMLElement | null = null;
-  private newIslandArmed = 0;
-  private statusTimer = 0;
-  private copyTimers = new WeakMap<HTMLButtonElement, number>();
-  private screen: SettingsScreen = "island";
+  private screen: SettingsScreen = "sound";
 
   constructor(root: HTMLElement, opts: SettingsOptions) {
     this.opts = opts;
@@ -232,9 +196,7 @@ export class SettingsMenu {
     this.values = { ...DEFAULT_SETTINGS };
     root.innerHTML = MARKUP;
     this.panel = this.$(".set-panel");
-    this.status = this.$("#set-status");
 
-    this.input("set-seed").value = seedName(opts.seed);
     this.applyInputModeCopy();
     this.bind();
     this.syncTabOrientation();
@@ -282,7 +244,6 @@ export class SettingsMenu {
     this.root.classList.remove("hidden");
     document.body.classList.add("settings-open");
     document.getElementById("footer-links")?.toggleAttribute("inert", true);
-    this.setStatus("");
     this.selectScreen(this.screen, { focusTab: false });
     this.$("#set-title").focus({ preventScroll: true });
     this.opts.onOpenChange(true);
@@ -294,7 +255,6 @@ export class SettingsMenu {
     this.root.classList.add("hidden");
     document.body.classList.remove("settings-open");
     document.getElementById("footer-links")?.toggleAttribute("inert", false);
-    this.disarmNewIsland();
     this.opts.onOpenChange(false);
     if (this.returnFocus?.isConnected) this.returnFocus.focus({ preventScroll: true });
     this.returnFocus = null;
@@ -304,7 +264,6 @@ export class SettingsMenu {
     if (this.open) this.hide();
     else this.show();
   }
-
 
   private bind(): void {
     this.$("#set-close").addEventListener("click", () => this.hide());
@@ -374,28 +333,6 @@ export class SettingsMenu {
         input.dispatchEvent(new Event("input", { bubbles: true }));
       });
     }
-
-    this.$("#set-copy-seed").addEventListener("click", () => {
-      void this.copy(seedName(this.opts.seed), this.$("#set-copy-seed") as HTMLButtonElement, "Copy seed");
-    });
-    this.$("#set-copy-link").addEventListener("click", () => {
-      const url = `${location.origin}${location.pathname}?seed=${seedName(this.opts.seed).toLowerCase()}`;
-      void this.copy(url, this.$("#set-copy-link") as HTMLButtonElement, "Copy link");
-    });
-
-    const newBtn = this.$("#set-new") as HTMLButtonElement;
-    newBtn.addEventListener("click", () => {
-      if (this.newIslandArmed) {
-        window.clearTimeout(this.newIslandArmed);
-        this.newIslandArmed = 0;
-        location.href = `${location.origin}${location.pathname}`;
-        return;
-      }
-      newBtn.textContent = "Click again to leave";
-      newBtn.classList.add("set-btn-armed");
-      this.setStatus("This island will be replaced. Click again to confirm.");
-      this.newIslandArmed = window.setTimeout(() => this.disarmNewIsland(), 6000);
-    });
   }
 
   private selectScreen(
@@ -403,7 +340,6 @@ export class SettingsMenu {
     opts: { focusTab: boolean },
   ): void {
     this.screen = id;
-    if (id !== "island") this.disarmNewIsland();
 
     for (const screen of SCREENS) {
       const tab = this.$(`#set-tab-${screen.id}`) as HTMLButtonElement;
@@ -451,14 +387,6 @@ export class SettingsMenu {
     e.preventDefault();
     const id = tabs[next].dataset.screen as SettingsScreen;
     this.selectScreen(id, { focusTab: true });
-  }
-
-  private disarmNewIsland(): void {
-    if (this.newIslandArmed) window.clearTimeout(this.newIslandArmed);
-    this.newIslandArmed = 0;
-    const btn = this.$("#set-new");
-    btn.textContent = "New island";
-    btn.classList.remove("set-btn-armed");
   }
 
   private range(
@@ -515,46 +443,6 @@ export class SettingsMenu {
 
   private commit(): void {
     this.opts.onApply(this.values);
-  }
-
-  private async copy(
-    text: string,
-    btn: HTMLButtonElement,
-    label: string,
-  ): Promise<void> {
-    try {
-      await navigator.clipboard.writeText(text);
-      this.flashCopied(btn, label);
-    } catch {
-      const field = this.input("set-seed");
-      field.value = text;
-      field.focus();
-      field.select();
-      this.setStatus("Copying was blocked. The text is selected — press Ctrl+C or Cmd+C.");
-    }
-  }
-
-  private flashCopied(btn: HTMLButtonElement, label: string): void {
-    const prev = this.copyTimers.get(btn);
-    if (prev) window.clearTimeout(prev);
-    btn.textContent = "Copied!";
-    this.copyTimers.set(
-      btn,
-      window.setTimeout(() => {
-        btn.textContent = label;
-        this.copyTimers.delete(btn);
-      }, 1600),
-    );
-  }
-
-  private setStatus(msg: string): void {
-    if (this.statusTimer) window.clearTimeout(this.statusTimer);
-    this.status.textContent = msg;
-    if (!msg) return;
-    this.statusTimer = window.setTimeout(() => {
-      this.status.textContent = "";
-      this.input("set-seed").value = seedName(this.opts.seed);
-    }, 6000);
   }
 
   private trapTab(e: KeyboardEvent): void {

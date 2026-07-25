@@ -71,9 +71,12 @@
   color: #fff8ec;
   margin: 0;
 }
-.legal-article h1:focus {
+.legal-article h1:focus-visible {
   outline: 3px solid #ffffff;
   outline-offset: 4px;
+}
+.legal-article h1:focus:not(:focus-visible) {
+  outline: none;
 }
 .legal-updated {
   margin: 0.65rem 0 0;

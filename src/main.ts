@@ -168,7 +168,6 @@ async function main(): Promise<void> {
   await yieldPaint();
 
   const settings = new SettingsMenu(document.getElementById("settings")!, {
-    seed,
     touchMode,
     onApply: (v) => {
       audio.setMaster(v.master);

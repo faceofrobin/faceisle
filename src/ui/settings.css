@@ -301,29 +301,6 @@
   color: var(--set-accent);
 }
 
-.set-input {
-  box-sizing: border-box;
-  width: 100%;
-  min-height: 48px;
-  padding: 0.65rem 0.9rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  /* ≥16px avoids iOS focus zoom on form controls. */
-  font-size: 1.0625rem;
-  letter-spacing: 0.12em;
-  color: var(--set-ink-strong);
-  background: var(--set-control);
-  border: 2px solid var(--set-control-edge);
-  border-radius: 0;
-}
-
-
-.set-btn-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-top: 0.15rem;
-}
-
 .set-btn {
   display: inline-flex;
   align-items: center;
@@ -346,17 +323,6 @@
 .set-btn:hover {
   background: #24344f;
   border-color: var(--set-accent);
-}
-
-.set-btn-armed {
-  color: var(--set-deep);
-  background: #f0c98a;
-  border-color: #f0c98a;
-}
-
-.set-btn-armed:hover {
-  background: #f7dcae;
-  border-color: #f7dcae;
 }
 
 .set-btn-go {
@@ -513,22 +479,12 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 0.85rem 1.25rem;
   flex: 0 0 auto;
   padding: 0.9rem clamp(1.2rem, 3vw, 1.75rem);
   border-top: 2px solid var(--set-edge);
   background: var(--set-rail);
-}
-
-.set-status {
-  margin: 0;
-  flex: 1 1 12rem;
-  min-height: 1.4em;
-  max-width: 42ch;
-  font-size: 0.9375rem;
-  line-height: 1.55;
-  color: var(--set-accent);
 }
 
 .set-sr {
@@ -591,7 +547,6 @@ html.legal-reading #settings {
   }
   .set-btn,
   .set-step,
-  .set-input,
   .set-box,
   .set-tab {
     border: 2px solid ButtonText;
@@ -724,29 +679,6 @@ html.legal-reading #settings {
     font-size: 0.9375rem;
   }
 
-  .set-input {
-    min-height: 44px;
-    padding: 0.55rem 0.75rem;
-    font-size: 1rem;
-    letter-spacing: 0.08em;
-  }
-
-  .set-btn-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.55rem;
-  }
-
-  .set-btn-row .set-btn {
-    width: 100%;
-    padding: 0.55rem 0.65rem;
-    font-size: 0.9375rem;
-  }
-
-  .set-btn-row #set-new {
-    grid-column: 1 / -1;
-  }
-
   .set-keys li {
     min-height: 0;
     margin-bottom: 0.4rem;
@@ -775,12 +707,6 @@ html.legal-reading #settings {
       0.65rem max(0.85rem, env(safe-area-inset-right))
       max(0.75rem, env(safe-area-inset-bottom))
       max(0.85rem, env(safe-area-inset-left));
-  }
-
-  .set-status {
-    flex: 0 0 auto;
-    max-width: none;
-    font-size: 0.875rem;
   }
 
   .set-foot .set-btn-go {
