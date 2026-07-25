@@ -83,10 +83,10 @@ const SCREENS: readonly {
   label: string;
   shortLabel: string;
 }[] = [
+  { id: "island", label: "This island", shortLabel: "Island" },
   { id: "sound", label: "Sound", shortLabel: "Sound" },
   { id: "controls", label: "Controls", shortLabel: "Controls" },
   { id: "gameplay", label: "Gameplay", shortLabel: "Play" },
-  { id: "island", label: "This island", shortLabel: "Island" },
 ];
 
 const COMPACT_MQ = "(max-width: 40rem), (max-height: 32rem)";
@@ -145,9 +145,31 @@ const MARKUP = `
       <section
         class="set-pane"
         role="tabpanel"
+        id="set-pane-island"
+        aria-labelledby="set-tab-island"
+        tabindex="0"
+      >
+        <h3 class="set-h" id="set-h-island">This island</h3>
+        <p class="set-note" id="set-seed-help">
+          Every island grows from a single number. Start a new one whenever you like.
+        </p>
+        <div class="set-field">
+          <label class="set-label" for="set-seed">Island seed</label>
+          <input class="set-input" id="set-seed" type="text" readonly spellcheck="false"
+                 autocomplete="off" aria-describedby="set-seed-help">
+        </div>
+        <div class="set-btn-row">
+          <button type="button" class="set-btn" id="set-new">New island</button>
+        </div>
+      </section>
+
+      <section
+        class="set-pane"
+        role="tabpanel"
         id="set-pane-sound"
         aria-labelledby="set-tab-sound"
         tabindex="0"
+        hidden
       >
         <h3 class="set-h" id="set-h-sound">Sound</h3>
         <p class="set-note">
@@ -219,28 +241,6 @@ const MARKUP = `
           DAY_RANGE,
         )}
       </section>
-
-      <section
-        class="set-pane"
-        role="tabpanel"
-        id="set-pane-island"
-        aria-labelledby="set-tab-island"
-        tabindex="0"
-        hidden
-      >
-        <h3 class="set-h" id="set-h-island">This island</h3>
-        <p class="set-note" id="set-seed-help">
-          Every island grows from a single number. Start a new one whenever you like.
-        </p>
-        <div class="set-field">
-          <label class="set-label" for="set-seed">Island seed</label>
-          <input class="set-input" id="set-seed" type="text" readonly spellcheck="false"
-                 autocomplete="off" aria-describedby="set-seed-help">
-        </div>
-        <div class="set-btn-row">
-          <button type="button" class="set-btn" id="set-new">New island</button>
-        </div>
-      </section>
     </div>
   </div>
 
@@ -266,7 +266,7 @@ export class SettingsMenu {
   private returnFocus: HTMLElement | null = null;
   private newIslandArmed = 0;
   private statusTimer = 0;
-  private screen: SettingsScreen = "sound";
+  private screen: SettingsScreen = "island";
 
   constructor(root: HTMLElement, opts: SettingsOptions) {
     this.opts = opts;
