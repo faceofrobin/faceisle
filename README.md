@@ -4,7 +4,7 @@ A quiet procedural island you walk in the browser. Day fades into night, the win
 
 Terrain, creatures, and sound are all generated at runtime by a small custom engine. The whole game is **400 KB**.
 
-[Play on itch.io](https://kengocodes.itch.io/isle) · [Play in browser](https://isle.vercel.app/) · [Source](https://github.com/kengocodes/isle)
+[Play on itch.io](https://kengocodes.itch.io/isle) · [Play in browser](https://isle-gamma.vercel.app/) · [Source](https://github.com/kengocodes/isle)
 
 ![Dawn on the shore](docs/screenshots/dawn.png)
 
