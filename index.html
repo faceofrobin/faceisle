@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>isle</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%234fa8e8'/%3E%3Ccircle cx='11' cy='5' r='3' fill='%23ffe9b0'/%3E%3Cpath d='M0 11 L5 7 L9 11 L16 9 V16 H0 Z' fill='%2361a844'/%3E%3C/svg%3E"
+    />
+    <style>
+      /* iOS ignores user-scalable=no; touch-action: manipulation kills
+         double-tap zoom while leaving pinch available on scrollable UI. */
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        height: 100dvh;
+        overflow: hidden;
+        overscroll-behavior: none;
+        background: #000;
+        cursor: crosshair;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+      }
+      canvas {
+        display: block;
+        touch-action: none;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+    </style>
+
+    <link rel="stylesheet" href="./src/ui/boot-chrome.css" />
+
+    <script>
+      (function () {
+        var path = location.pathname;
+        if (/^\/(privacy|terms)\/$/.test(path)) {
+          history.replaceState(
+            null,
+            "",
+            path.slice(0, -1) + location.search + location.hash,
+          );
+          path = location.pathname;
+        }
+        var legacy = /^\/(privacy|terms)\/?$/.test(path);
+        if (legacy) {
+          var id = path.replace(/\//g, "");
+          history.replaceState(null, "", "/" + location.search + "#" + id);
+        }
+        var hash = location.hash.replace(/^#/, "").replace(/\/$/, "");
+        if (hash === "privacy" || hash === "terms") {
+          document.documentElement.classList.add("legal-reading");
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="boot" role="status" aria-live="polite" aria-busy="true">
+      <svg
+        class="boot-mark"
+        viewBox="0 0 64 40"
+        width="88"
+        height="55"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <rect width="64" height="40" fill="#0c1628" rx="3" />
+        <circle cx="44" cy="12" r="5.5" fill="#ffe9b0" />
+        <path
+          d="M0 29 C10 22 18 24 28 20 C38 16 46 22 64 18 V40 H0 Z"
+          fill="#5fa84a"
+        />
+        <path
+          d="M0 33 C14 30 24 34 36 31 C48 28 56 32 64 30 V40 H0 Z"
+          fill="#4fa8e8"
+          opacity="0.85"
+        />
+      </svg>
+      <p class="boot-label" id="boot-label">Growing an island…</p>
+      <div class="boot-bar" aria-hidden="true">
+        <div class="boot-bar-fill" id="boot-fill"></div>
+      </div>
+    </div>
+
+    <div id="prompt">Click to start</div>
+
+    <div id="footer-links">
+      <span class="pill">
+        <button type="button" id="btn-settings" aria-haspopup="dialog">
+          Settings</button
+        ><span class="sep">·</span><a href="#privacy">Privacy</a
+        ><span class="sep">·</span><a href="#terms">Terms</a
+        ><span class="sep">·</span
+        ><a
+          href="https://github.com/kengocodes/isle"
+          target="_blank"
+          rel="noopener noreferrer"
+          >GitHub</a
+        >
+      </span>
+    </div>
+
+
+    <div id="settings" class="hidden"></div>
+
+
+    <div id="legal" class="legal-screen hidden">
+      <div class="legal-shell">
+        <a href="./" id="btn-legal-back" class="legal-back">← Back to game</a>
+        <div id="legal-content"></div>
+      </div>
+    </div>
+
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>

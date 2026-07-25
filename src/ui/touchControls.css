@@ -1,0 +1,127 @@
+/* Twin-thumb HUD (Sylvaria-style): floating joyzone left, quiet pause top-right. */
+
+#touch-ui {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  pointer-events: none;
+}
+
+#touch-ui.hidden {
+  display: none !important;
+}
+
+#touch-ui * {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.touch-pause {
+  pointer-events: auto;
+  position: absolute;
+  top: max(0.75rem, env(safe-area-inset-top));
+  right: max(0.75rem, env(safe-area-inset-right));
+  z-index: 36;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 0.9rem;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(10, 17, 32, 0.38);
+  color: #fff4e4;
+  font-family: system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 1rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  line-height: 1.5;
+  text-transform: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Title screen already has Settings in the footer. */
+body:not(.playing) .touch-pause {
+  display: none;
+}
+
+.touch-pause:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+/* Large left catch zone — works in portrait and landscape. */
+.touch-joyzone {
+  pointer-events: auto;
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 44vw;
+  height: 72vh;
+  z-index: 36;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.touch-joy {
+  position: absolute;
+  width: 7.5rem;
+  height: 7.5rem;
+  margin: -3.75rem 0 0 -3.75rem;
+  border-radius: 50%;
+  background: rgba(10, 17, 32, 0.45);
+  border: 1px solid rgba(255, 244, 228, 0.22);
+  box-shadow: inset 0 0 0 1px rgba(10, 17, 32, 0.25);
+  opacity: 0;
+}
+
+.touch-joy.on {
+  opacity: 1;
+}
+
+.touch-joy-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2.65rem;
+  height: 2.65rem;
+  margin: -1.325rem 0 0 -1.325rem;
+  border-radius: 50%;
+  background: rgba(255, 244, 228, 0.88);
+  border: 1px solid rgba(255, 244, 228, 0.35);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+  will-change: transform;
+}
+
+body.touch-mode {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+body.touch-mode canvas {
+  touch-action: none;
+}
+
+/* Menus need their own touch behavior above the locked game surface. */
+body.settings-open,
+body.settings-open #settings {
+  touch-action: manipulation;
+}
+
+html.legal-reading,
+html.legal-reading body {
+  touch-action: manipulation;
+}
+
+body.settings-open #touch-ui,
+html.legal-reading #touch-ui {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+@media (orientation: portrait) and (max-width: 920px) {
+  .touch-joyzone {
+    width: 52vw;
+    height: 58vh;
+  }
+}
