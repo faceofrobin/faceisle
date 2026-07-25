@@ -1,5 +1,10 @@
 
 import "./settings.css";
+import {
+  DEFAULT_DAY_LENGTH,
+  MAX_DAY_LENGTH,
+  MIN_DAY_LENGTH,
+} from "../world/daycycle";
 
 export interface SettingsValues {
   master: number;
@@ -10,6 +15,8 @@ export interface SettingsValues {
   lookSensitivity: number;
   /** When true, moving the mouse up looks down. */
   invertY: boolean;
+  /** Full day/night cycle length in seconds. */
+  dayLength: number;
 }
 
 export const DEFAULT_SETTINGS: SettingsValues = {
@@ -19,6 +26,7 @@ export const DEFAULT_SETTINGS: SettingsValues = {
   muted: false,
   lookSensitivity: 1,
   invertY: false,
+  dayLength: DEFAULT_DAY_LENGTH,
 };
 
 export interface SettingsOptions {
@@ -68,7 +76,7 @@ function sliderField(
     </div>`;
 }
 
-type SettingsScreen = "sound" | "controls" | "island";
+type SettingsScreen = "sound" | "controls" | "gameplay" | "island";
 
 const SCREENS: readonly {
   id: SettingsScreen;
@@ -77,6 +85,7 @@ const SCREENS: readonly {
 }[] = [
   { id: "sound", label: "Sound", shortLabel: "Sound" },
   { id: "controls", label: "Controls", shortLabel: "Controls" },
+  { id: "gameplay", label: "Gameplay", shortLabel: "Play" },
   { id: "island", label: "This island", shortLabel: "Island" },
 ];
 
@@ -84,6 +93,21 @@ const COMPACT_MQ = "(max-width: 40rem), (max-height: 32rem)";
 
 /** Look-sensitivity slider: percent of the default feel (25%..200%). */
 const LOOK_RANGE = { min: 25, max: 200, step: 5 } as const;
+
+/** Day length slider in whole minutes (matches DayCycle clamp). */
+const DAY_RANGE = {
+  min: MIN_DAY_LENGTH / 60,
+  max: MAX_DAY_LENGTH / 60,
+  step: 1,
+} as const;
+
+function formatDayMinutes(mins: number): string {
+  return `${mins} min`;
+}
+
+function speakDayMinutes(mins: number): string {
+  return `${mins} minute${mins === 1 ? "" : "s"}`;
+}
 
 const MARKUP = `
 <div class="set-scrim" data-set-dismiss></div>
@@ -172,6 +196,28 @@ const MARKUP = `
           <li>Click — look around</li>
           <li><kbd>Esc</kbd> — open or close this menu</li>
         </ul>
+      </section>
+
+      <section
+        class="set-pane"
+        role="tabpanel"
+        id="set-pane-gameplay"
+        aria-labelledby="set-tab-gameplay"
+        tabindex="0"
+        hidden
+      >
+        <h3 class="set-h" id="set-h-gameplay">Gameplay</h3>
+        <p class="set-note">
+          How quickly day turns to night. Changes apply straight away, for this visit only.
+        </p>
+        ${sliderField(
+          "set-day",
+          "Day length",
+          "Shorter day",
+          "Longer day",
+          formatDayMinutes(DEFAULT_DAY_LENGTH / 60),
+          DAY_RANGE,
+        )}
       </section>
 
       <section
@@ -351,6 +397,15 @@ export class SettingsMenu {
       (n) => `${n} percent`,
     );
 
+    this.range(
+      "set-day",
+      (n) => {
+        this.values.dayLength = n * 60;
+        return formatDayMinutes(n);
+      },
+      speakDayMinutes,
+    );
+
     this.check("set-muted", (on) => {
       this.values.muted = on;
     });
@@ -498,6 +553,13 @@ export class SettingsMenu {
     look.setAttribute("aria-valuetext", `${lookPct} percent`);
     this.$("#set-look-out").textContent = `${lookPct}%`;
     this.paintFill(look);
+
+    const dayMins = Math.round(this.values.dayLength / 60);
+    const day = this.input("set-day");
+    day.value = String(clamp(dayMins, DAY_RANGE.min, DAY_RANGE.max));
+    day.setAttribute("aria-valuetext", speakDayMinutes(dayMins));
+    this.$("#set-day-out").textContent = formatDayMinutes(dayMins);
+    this.paintFill(day);
 
     this.input("set-muted").checked = this.values.muted;
     this.input("set-invert-y").checked = this.values.invertY;

@@ -1,6 +1,9 @@
 import * as THREE from '../gl';
 
-const DAY_LENGTH = 540;
+/** Default full day/night cycle length in seconds (9 minutes). */
+export const DEFAULT_DAY_LENGTH = 540;
+export const MIN_DAY_LENGTH = 180;
+export const MAX_DAY_LENGTH = 1800;
 
 interface Keyframe {
   t: number;
@@ -48,6 +51,7 @@ export class DayCycle {
   readonly moonDir = new THREE.Vector3();
   daylight = 0;
 
+  private _dayLength = DEFAULT_DAY_LENGTH;
   private colA = new THREE.Color();
   private colB = new THREE.Color();
 
@@ -56,8 +60,21 @@ export class DayCycle {
     this.update(0);
   }
 
+  /** Full day/night cycle length in seconds. */
+  get dayLength(): number {
+    return this._dayLength;
+  }
+
+  setDayLength(seconds: number): void {
+    this._dayLength = THREE.MathUtils.clamp(
+      seconds,
+      MIN_DAY_LENGTH,
+      MAX_DAY_LENGTH,
+    );
+  }
+
   update(dt: number): void {
-    this.t = (this.t + dt / DAY_LENGTH) % 1;
+    this.t = (this.t + dt / this._dayLength) % 1;
 
     const theta = (this.t - 0.25) * Math.PI * 2;
     this.sunDir.set(Math.cos(theta), Math.sin(theta), 0.35).normalize();

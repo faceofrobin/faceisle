@@ -178,6 +178,7 @@ async function main(): Promise<void> {
       audio.setMuted(v.muted);
       controls.setLookSensitivity(v.lookSensitivity);
       controls.setInvertY(v.invertY);
+      day.setDayLength(v.dayLength);
     },
     onOpenChange: (open) => {
       controls.setEnabled(!open);
