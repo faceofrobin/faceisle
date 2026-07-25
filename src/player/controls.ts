@@ -12,6 +12,8 @@ export class Controls {
   readonly position = new THREE.Vector3();
   onFootstep: (() => void) | null = null;
   onFirstInteract: (() => void) | null = null;
+  /** Fired on every canvas click / unlock gesture (including after start). */
+  onGesture: (() => void) | null = null;
   onLockChange: ((locked: boolean) => void) | null = null;
   get hasInteracted(): boolean {
     return this.interacted;
@@ -60,6 +62,7 @@ export class Controls {
 
     dom.addEventListener("click", () => {
       this.beginPlay();
+      this.onGesture?.();
       if (!this._touchMode && !this.locked) dom.requestPointerLock();
     });
 
@@ -76,6 +79,16 @@ export class Controls {
     window.addEventListener("keydown", (e) => {
       if (!this._enabled) return;
       if (e.code.startsWith("Arrow")) e.preventDefault();
+      // First key also counts as the unlock gesture (WASD before clicking).
+      if (
+        !this.interacted &&
+        (e.code.startsWith("Key") ||
+          e.code.startsWith("Arrow") ||
+          e.code === "ShiftLeft" ||
+          e.code === "ShiftRight")
+      ) {
+        this.beginPlay();
+      }
       this.keys.add(e.code);
     });
     window.addEventListener("keyup", (e) => this.keys.delete(e.code));

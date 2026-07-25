@@ -148,6 +148,9 @@ async function main(): Promise<void> {
     document.body.classList.add("playing");
     if (!shotMode) touchUi?.show();
   };
+  controls.onGesture = () => {
+    if (!shotMode) audio.resume();
+  };
 
   function groundUnder(x: number, z: number): Ground {
     const h = terrain.heightAt(x, z);
@@ -208,10 +211,19 @@ async function main(): Promise<void> {
     touchUi.show();
   });
 
+  // Only treat pointer-lock *exit* as pause. A failed first lock (common in
+  // iframes / browsers that deny lock) used to open Settings immediately and
+  // muffle the audio, which felt like "no sound after click".
+  let hadPointerLock = false;
   controls.onLockChange = (locked) => {
     if (controls.touchMode || shotMode) return;
-    document.body.classList.toggle("paused", !locked);
-    if (locked || !controls.hasInteracted) return;
+    if (locked) {
+      hadPointerLock = true;
+      document.body.classList.remove("paused");
+      return;
+    }
+    document.body.classList.toggle("paused", hadPointerLock);
+    if (!hadPointerLock || !controls.hasInteracted) return;
     if (!isLegalOpen() && !settings.isOpen) settings.show();
   };
 

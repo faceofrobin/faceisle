@@ -185,8 +185,8 @@ export class Wind {
     const want = Math.min(1, (speed / 5.5) * (0.35 + exposure * 0.65));
     this.strength += (want - this.strength) * Math.min(1, dt * 0.4);
 
-    this.air.gain.setTargetAtTime(0.004 + this.strength * 0.026, t, 1.5);
-    this.leaves.gain.setTargetAtTime(trees * (0.006 + this.strength * 0.02), t, 1.5);
+    this.air.gain.setTargetAtTime(0.012 + this.strength * 0.034, t, 1.5);
+    this.leaves.gain.setTargetAtTime(trees * (0.01 + this.strength * 0.024), t, 1.5);
     this.airFilter.frequency.setTargetAtTime(360 + exposure * 520 + this.strength * 300, t, 2.5);
 
     this.gustTimer -= dt * (0.5 + this.strength);

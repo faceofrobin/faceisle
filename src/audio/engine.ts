@@ -115,8 +115,16 @@ export class AudioEngine {
 
 
   start(): void {
-    if (this.ctx) return;
-    const ctx = new AudioContext();
+    if (this.ctx) {
+      void this.ctx.resume();
+      return;
+    }
+    const AC =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext })
+        .webkitAudioContext;
+    if (!AC) return;
+    const ctx = new AC();
     this.ctx = ctx;
     void ctx.resume();
 
@@ -216,8 +224,10 @@ export class AudioEngine {
     this.drone = new Drone(ctx, musicDry, hallIn);
     this.chord = this.key.colour.voicing.map((v) => TONIC + v);
     this.drone.setChord(this.chord, true);
-    this.drone.setLevel(0.05, 20);
-    this.master.gain.setTargetAtTime(this.targetMaster(), ctx.currentTime + 0.1, 2.2);
+    this.drone.setLevel(0.07, 4);
+    // Bring the master up quickly so the click-to-start gesture is rewarded
+    // with audible sound; the beds/drone stay soft, but not silent for seconds.
+    this.master.gain.setTargetAtTime(this.targetMaster(), ctx.currentTime, 0.35);
 
     document.addEventListener('visibilitychange', () => {
       if (!this.ctx) return;
@@ -226,10 +236,19 @@ export class AudioEngine {
     });
   }
 
+  /** Re-unlock after the browser suspends the context (tab blur, autoplay, etc.). */
+  resume(): void {
+    if (!this.ctx) return;
+    if (this.ctx.state !== 'running') void this.ctx.resume();
+  }
 
   update(dt: number, w: WorldSound): void {
     const ctx = this.ctx;
-    if (!ctx || ctx.state !== 'running') return;
+    if (!ctx) return;
+    if (ctx.state !== 'running') {
+      void ctx.resume();
+      return;
+    }
     const t = ctx.currentTime;
 
     const canopy = Math.min(1, w.treesNear / 15);
