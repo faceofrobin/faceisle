@@ -1,4 +1,4 @@
-import * as THREE from "three";
+import * as THREE from "../gl";
 import { DayCycle } from "./daycycle";
 import { Rng } from "../util/random";
 

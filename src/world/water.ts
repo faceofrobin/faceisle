@@ -1,4 +1,4 @@
-import * as THREE from "three";
+import * as THREE from "../gl";
 import { DayCycle } from "./daycycle";
 import { Terrain } from "./terrain";
 import { SNAP_GLSL } from "../gfx/post";

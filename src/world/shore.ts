@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from '../gl';
 import { Terrain } from './terrain';
 
 export function probeShore(terrain: Terrain, px: number, pz: number): number {

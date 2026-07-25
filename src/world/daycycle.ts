@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from '../gl';
 
 const DAY_LENGTH = 540;
 

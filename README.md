@@ -2,7 +2,7 @@
 
 A quiet procedural island you walk in the browser. Day fades into night, the wind moves through the trees, and nothing asks you to hurry. Inspired by games like [Proteus](https://en.wikipedia.org/wiki/Proteus_(video_game)).
 
-Terrain, creatures, and sound are all generated at runtime by a small custom engine. The whole game is **624 KB**.
+Terrain, creatures, and sound are all generated at runtime by a small custom engine. The whole game is **400 KB**.
 
 [Play on itch.io](https://kengocodes.itch.io/isle) · [Play in browser](https://isle.vercel.app/) · [Source](https://github.com/kengocodes/isle)
 
@@ -20,7 +20,7 @@ Terrain, creatures, and sound are all generated at runtime by a small custom eng
 ## Stack
 
 - **TypeScript** + **Vite 6**
-- **Three.js** `0.180` (only runtime dependency)
+- Custom **WebGL2** renderer (no runtime dependencies)
 - Custom loop: procedural world, pixel post, generative **Web Audio**
 
 ## Setup
@@ -45,7 +45,7 @@ Static hosting: upload `dist/` (relative `base`, works in itch embeds). Vercel r
 | Shift         | Stroll                |
 | Esc           | Settings              |
 
-Touch devices get an on-screen stick and look pad.
+Touch devices get an on-screen stick; drag elsewhere to look.
 
 Shareable islands use query params, e.g. `?seed=A7C3E911&t=0.26&weather=clear&goto=marsh`.
 

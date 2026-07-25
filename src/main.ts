@@ -1,4 +1,4 @@
-import * as THREE from "three";
+import * as THREE from "./gl";
 import { Rng } from "./util/random";
 import { DayCycle } from "./world/daycycle";
 import { Terrain } from "./world/terrain";
@@ -29,8 +29,10 @@ import { TouchControls } from "./ui/touchControls";
 THREE.ColorManagement.enabled = false;
 
 const params = new URLSearchParams(location.search);
-/** `?shot=1` — hide chrome & auto-start for marketing screenshots. */
+/** `?shot=1` — hide chrome & auto-start for marketing screenshots.
+ *  `?shot=cover` — same framing hooks, but keep the title logo on screen. */
 const shotMode = params.has("shot");
+const coverShot = params.get("shot") === "cover";
 
 function parseSeed(raw: string | null): number | null {
   if (raw === null) return null;
@@ -270,7 +272,7 @@ async function main(): Promise<void> {
 
   if (shotMode) {
     document.body.classList.add("shot");
-    controls.beginPlay();
+    if (!coverShot) controls.beginPlay();
     (window as unknown as { __isle: object }).__isle = {
       day,
       weather,

@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from '../../gl';
 import { PixelSprite } from '../../gfx/sprites/painter';
 
 export interface CreatureSounds {

@@ -106,6 +106,15 @@ canvas {
   }
 }
 
+/* Marketing / cover captures — chrome off, canvas only. */
+body.shot #prompt,
+body.shot #footer-links,
+body.shot #settings-btn,
+body.shot #pause-btn,
+body.shot #boot {
+  display: none !important;
+}
+
 /* Prompt / footer wait until the island is ready. */
 body:not(.ready) #prompt,
 body:not(.ready) #footer-links {

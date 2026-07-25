@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from '../gl';
 
 export const TARGET_ROWS = 270;
 
@@ -12,14 +12,13 @@ vec3 snapFlat(vec3 c) {
 }
 `;
 
+/**
+ * Posterise a built-in material's final colour onto the same ladder the dither
+ * pass uses, so flat-shaded geometry lands on the palette before downsampling.
+ * Applied after fog, which is what keeps distant terrain banding consistently.
+ */
 export function snapMaterial(mat: THREE.Material): void {
-  mat.onBeforeCompile = (shader) => {
-    shader.fragmentShader = shader.fragmentShader.replace(
-      "#include <fog_fragment>",
-      `#include <fog_fragment>
-       gl_FragColor.rgb = floor(gl_FragColor.rgb * ${LADDER}.0 + 0.5) / ${LADDER}.0;`,
-    );
-  };
+  mat.snap = LADDER;
 }
 
 const VERT = `

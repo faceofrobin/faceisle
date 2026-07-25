@@ -1,4 +1,4 @@
-import * as THREE from "three";
+import * as THREE from "../gl";
 import { DITHER_LEVELS } from "../gfx/post";
 
 

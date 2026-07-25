@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from '../gl';
 import { PixelSprite } from './sprites/painter';
 import { SNAP_GLSL } from './post';
 

@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from '../../gl';
 import { Rng } from '../../util/random';
 import { makeBirdTextures } from '../../gfx/sprites/fauna';
 import { FramePair, frameMaterials } from './common';
