@@ -160,6 +160,11 @@ void main() {
   gl_PointSize = size;
   #ifdef SIZE_ATTENUATION
     gl_PointSize *= (scale / -mv.z);
+    // Attenuation alone is unbounded, and a petal or a snowflake a couple of
+    // metres from the eye then covers a fifth of the frame's height as one
+    // hard square. Everything drawn this way is small and far by intent, so
+    // it is capped — the same thing the fireflies' own shader does.
+    gl_PointSize = clamp(gl_PointSize, 1.0, 5.0);
   #endif
   #ifdef USE_FOG
     vFogDepth = -mv.z;

@@ -1,8 +1,9 @@
 import * as THREE from "../gl";
 import { Rng } from "../util/random";
-import { Terrain } from "./terrain";
+import { Landmark, Terrain } from "./terrain";
 import { Vegetation } from "./vegetation";
 import { Stones } from "./stones";
+import { Landmarks } from "./landmarks";
 import { Creatures } from "./creatures";
 import { CreatureSounds } from "./creatures/common";
 import { DayCycle } from "./daycycle";
@@ -20,6 +21,7 @@ export interface IslandSite {
   radius: number;
   relief: number;
   snowline: number;
+  landmark: Landmark;
   /** The island the game opens on: cell (0, 0), and the one `?seed=` names. */
   home: boolean;
 }
@@ -63,6 +65,7 @@ export class Island {
   detail: Detail = "none";
   vegetation: Vegetation | null = null;
   stones: Stones | null = null;
+  landmarks: Landmarks | null = null;
   creatures: Creatures | null = null;
 
   private farMesh: THREE.Mesh | null = null;
@@ -71,6 +74,7 @@ export class Island {
   private committed = 0;
   private vegSeed: number;
   private stoneSeed: number;
+  private landmarkSeed: number;
   private creatureSeed: number;
 
   constructor(site: IslandSite) {
@@ -82,11 +86,15 @@ export class Island {
       radius: site.radius,
       relief: site.relief,
       snowline: site.snowline,
+      landmark: site.landmark,
     });
     this.skyRng = rng.fork();
     this.vegSeed = forkSeed(rng);
     this.stoneSeed = forkSeed(rng);
     this.creatureSeed = forkSeed(rng);
+    // Drawn from the stone stream rather than the shared one, so adding a
+    // landmark did not move every island's creatures along by one.
+    this.landmarkSeed = forkSeed(new Rng(this.stoneSeed));
     this.weatherRng = rng.fork();
     this.spawnRng = rng;
   }
@@ -141,6 +149,15 @@ export class Island {
       this.commit();
       yield;
     }
+    if (!this.landmarks) {
+      this.landmarks = new Landmarks(
+        this.group,
+        this.terrain,
+        new Rng(this.landmarkSeed),
+      );
+      this.commit();
+      yield;
+    }
     if (!this.creatures) {
       this.creatures = new Creatures(
         this.group,
@@ -182,6 +199,7 @@ export class Island {
     this.fullMesh = null;
     this.vegetation = null;
     this.stones = null;
+    this.landmarks = null;
     this.creatures = null;
     if (this.farMesh) {
       this.farMesh.visible = true;
@@ -200,6 +218,7 @@ export class Island {
     this.fullMesh = null;
     this.vegetation = null;
     this.stones = null;
+    this.landmarks = null;
     this.creatures = null;
     this.detail = "none";
   }

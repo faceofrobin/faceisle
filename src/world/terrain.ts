@@ -19,6 +19,22 @@ export interface BiomeWeights {
 }
 
 /**
+ * The one large thing an island is known by, seen from a long way off.
+ *
+ * The first three are shapes the ground itself takes, which costs nothing to
+ * draw and reads from kilometres away — an island's silhouette is the only
+ * part of it you can make out across open water. The last two are built on
+ * the island instead, so their ground is a broad low hill that leaves them
+ * somewhere to stand and nothing to compete with.
+ */
+export type Landmark = "peak" | "caldera" | "spire" | "colossus" | "elder";
+
+/** Landmarks that are something standing on the island rather than the island. */
+export function isBuilt(landmark: Landmark): boolean {
+  return landmark === "colossus" || landmark === "elder";
+}
+
+/**
  * How one island differs from another. Every field defaults to the values the
  * single-island game used, so a given seed still generates the island it always
  * did — the archipelago varies islands through this, not by touching the noise.
@@ -27,9 +43,10 @@ export interface IslandShape {
   centerX?: number;
   centerZ?: number;
   radius?: number;
-  /** Multiplies hills, massif and peak. Below 1 gives low sandy skerries. */
+  /** Multiplies hills, massif and the landmark. Below 1 gives low skerries. */
   relief?: number;
   snowline?: number;
+  landmark?: Landmark;
 }
 
 const AUTUMN_ANG = 1.95;
@@ -48,7 +65,9 @@ export class Terrain {
   readonly snowline: number;
   readonly centerX: number;
   readonly centerZ: number;
+  /** Where the landmark stands. Still called the peak for `?goto=peak`. */
   readonly peakSite: THREE.Vector3;
+  readonly landmarkKind: Landmark;
 
   private heightNoise: Noise2D;
   private maskNoise: Noise2D;
@@ -62,6 +81,7 @@ export class Terrain {
   private peakX: number;
   private peakZ: number;
   private relief: number;
+  private landmark: Landmark;
   /** Island size relative to the home island, for distances tuned against it. */
   private k: number;
   private planeSize: number;
@@ -84,6 +104,7 @@ export class Terrain {
     this.islandRadius = shape.radius ?? HOME_RADIUS;
     this.relief = shape.relief ?? 1;
     this.snowline = shape.snowline ?? 17.5;
+    this.landmark = shape.landmark ?? "peak";
     this.k = this.islandRadius / HOME_RADIUS;
     this.planeSize = this.islandRadius * PLANE_OVERSHOOT;
 
@@ -97,6 +118,7 @@ export class Terrain {
       this.heightAt(peakWorldX, peakWorldZ),
       peakWorldZ,
     );
+    this.landmarkKind = this.landmark;
     this.material = new THREE.MeshBasicMaterial({
       vertexColors: true,
       fog: true,
@@ -150,8 +172,7 @@ export class Terrain {
 
     const dpx = lx - this.peakX;
     const dpz = lz - this.peakZ;
-    const d2 = dpx * dpx + dpz * dpz;
-    const peak = d2 < 30000 ? 24 * Math.exp(-d2 / 3600) : 0;
+    const peak = this.landmarkRise(dpx * dpx + dpz * dpz);
 
     const warp =
       this.maskNoise.fbm(lx * 0.008 + 71.3, lz * 0.008 + 29.9, 3) * 0.22;
@@ -172,6 +193,41 @@ export class Terrain {
       }
     }
     return h;
+  }
+
+  /**
+   * What the landmark does to the ground, given the squared distance from its
+   * site. Everything here is added before the island's own falloff, so a
+   * landmark near the shore is cut down by it exactly as the hills are.
+   */
+  private landmarkRise(d2: number): number {
+    switch (this.landmark) {
+      case "caldera": {
+        if (d2 > 90000) return 0;
+        // A ring wall with the ground fallen away inside it. The bowl is deep
+        // enough to take the floor under the sea, and the sea is a plane at
+        // zero everywhere — so the lake, its shoreline and its chunky coast
+        // all come for free, without the water knowing anything about it.
+        const d = Math.sqrt(d2);
+        const rim = d - 96;
+        return 27 * Math.exp(-(rim * rim) / 760) - 19 * Math.exp(-d2 / 2900);
+      }
+      case "spire": {
+        if (d2 > 40000) return 0;
+        // A broad shoulder with a needle out of it. The needle is narrow
+        // enough that the full-detail mesh only just resolves it, which is
+        // what makes it read as sheer rather than as another hill.
+        return 17 * Math.exp(-d2 / 6400) + 40 * Math.exp(-d2 / 320);
+      }
+      case "colossus":
+      case "elder":
+        // A broad low rise: somewhere to put the thing, with nothing to
+        // compete with it.
+        return d2 < 90000 ? 8 * Math.exp(-d2 / 9000) : 0;
+      case "peak":
+      default:
+        return d2 < 30000 ? 24 * Math.exp(-d2 / 3600) : 0;
+    }
   }
 
   slopeAt(x: number, z: number): number {

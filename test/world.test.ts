@@ -77,3 +77,59 @@ describe("terrain", () => {
     expect(big.farSegments).toBeLessThan(big.fullSegments / 3);
   });
 });
+
+describe("landmarks", () => {
+  /** Where an island's landmark stands, and a point `d` metres off it. */
+  function around(t: Terrain, d: number): { at: number; off: number[] } {
+    const p = t.peakSite;
+    const off = [0, 1, 2, 3].map((i) => {
+      const a = (i / 4) * Math.PI * 2;
+      return t.heightAt(p.x + Math.cos(a) * d, p.z + Math.sin(a) * d);
+    });
+    return { at: t.heightAt(p.x, p.z), off };
+  }
+
+  it("rings a caldera with a wall and floods the middle", () => {
+    for (const seed of [1, 2, 3, 4, 5]) {
+      const t = new Terrain(new Rng(seed), { landmark: "caldera" });
+      const { at, off } = around(t, 96);
+      // Every direction out to the rim is well above the floor, and the floor
+      // is under the sea — which is what makes the lake.
+      for (const rim of off) expect(rim - at).toBeGreaterThan(20);
+      expect(at).toBeLessThan(0);
+    }
+  });
+
+  it("raises a spire to a point", () => {
+    for (const seed of [1, 2, 3, 4, 5]) {
+      const t = new Terrain(new Rng(seed), { landmark: "spire" });
+      const near = around(t, 70);
+      for (const h of near.off) expect(near.at - h).toBeGreaterThan(25);
+      // And it is a needle, not a dome: most of that is lost in the first 25 m.
+      const close = around(t, 25);
+      for (const h of close.off) expect(near.at - h).toBeGreaterThan(12);
+    }
+  });
+
+  it("gives a built landmark a hill to stand on, above water", () => {
+    for (const landmark of ["colossus", "elder"] as const) {
+      for (const seed of [1, 2, 3, 4, 5]) {
+        const t = new Terrain(new Rng(seed), { landmark });
+        const { at, off } = around(t, 70);
+        expect(at).toBeGreaterThan(3);
+        // A rise, but a gentle one — the thing standing on it is the landmark.
+        for (const h of off) expect(at - h).toBeLessThan(28);
+      }
+    }
+  });
+
+  it("leaves the home island's mountain exactly as it was", () => {
+    const before = new Terrain(new Rng(0xa7c3e911));
+    const after = new Terrain(new Rng(0xa7c3e911), { landmark: "peak" });
+    for (let i = 0; i < 300; i++) {
+      const x = ((i * 97) % 600) - 300;
+      const z = ((i * 211) % 600) - 300;
+      expect(after.heightAt(x, z)).toBe(before.heightAt(x, z));
+    }
+  });
+});

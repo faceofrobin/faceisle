@@ -1,4 +1,4 @@
-import { Painter, PixelSprite, RGB, rgb } from "./painter";
+import { PixelSprite, RGB, Stamp, rgb, stamped } from "./painter";
 
 /**
  * The raven's wing, seen from inside the bird.
@@ -51,15 +51,10 @@ const WRIST_U = 0.42;
 const WRIST_X = WRIST_U * (LW - 1);
 const WRIST_Y = lead(WRIST_U) + chord(WRIST_U) * 0.42;
 
-/** The upright wing: `null` where there is no feather. */
-function upright(): (RGB | null)[] {
-  const px: (RGB | null)[] = new Array(LW * LH).fill(null);
-  const put = (x: number, y: number, c: RGB): void => {
-    const ix = Math.round(x);
-    const iy = Math.round(y);
-    if (ix < 0 || iy < 0 || ix >= LW || iy >= LH) return;
-    px[iy * LW + ix] = c;
-  };
+/** The upright wing. */
+function upright(): Stamp {
+  const px = new Stamp(LW, LH);
+  const put = (x: number, y: number, c: RGB): void => px.set(x, y, c);
 
   for (let x = 0; x < LW; x++) {
     const u = x / (LW - 1);
@@ -91,8 +86,7 @@ function upright(): (RGB | null)[] {
     const top = lead(u);
     const deep = chord(u);
     for (let y = Math.floor(top + deep * 0.3); y <= top + deep * 0.55; y++) {
-      const iy = Math.round(y);
-      if (iy >= 0 && iy < LH && px[iy * LW + x]) put(x, y, QUILL);
+      if (px.at(x, Math.round(y))) put(x, y, QUILL);
     }
   }
 
@@ -103,30 +97,17 @@ function upright(): (RGB | null)[] {
 export function makeWingTextures(): PixelSprite[] {
   const wing = upright();
   const out: PixelSprite[] = [];
-
   for (let f = 0; f < WING_FRAMES; f++) {
     const t = f / (WING_FRAMES - 1);
-    const angle = UP + (DOWN - UP) * t;
-    // Sampled backwards from the sprite, so every pixel is filled exactly once
-    // and the turn leaves no gaps.
-    const cos = Math.cos(-angle);
-    const sin = Math.sin(-angle);
-    const p = new Painter(WING_W, WING_H);
-
-    for (let y = 0; y < WING_H; y++) {
-      for (let x = 0; x < WING_W; x++) {
-        const dx = x - PIVOT_X;
-        // Sprite rows run downward and so do the wing's, so the y term flips
-        // on the way back.
-        const dy = PIVOT_Y - y;
-        const sx = Math.round(dx * cos - dy * sin);
-        const sy = Math.round(ROOT_Y - (dx * sin + dy * cos));
-        if (sx < 0 || sy < 0 || sx >= LW || sy >= LH) continue;
-        const c = wing[sy * LW + sx];
-        if (c) p.set(x, y, c);
-      }
-    }
-    out.push(p.toSprite());
+    out.push(
+      stamped(wing, {
+        width: WING_W,
+        height: WING_H,
+        pivot: [0, ROOT_Y],
+        at: [PIVOT_X, PIVOT_Y],
+        angle: UP + (DOWN - UP) * t,
+      }),
+    );
   }
   return out;
 }

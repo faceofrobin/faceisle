@@ -1,0 +1,92 @@
+/* Brief controls legend at the bottom after play begins. */
+
+#controls-hint {
+  position: fixed;
+  left: 50%;
+  bottom: max(1.1rem, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 38;
+  max-width: min(36rem, calc(100vw - 2rem));
+  padding: 0.55rem 1.1rem;
+  border-radius: 999px;
+  background: rgba(10, 17, 32, 0.72);
+  color: #fff4e4;
+  font-family: system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.85s ease,
+    visibility 0.85s ease;
+}
+
+#controls-hint.is-visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+#controls-hint.is-leaving {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.controls-hint-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem 0.85rem;
+}
+
+.controls-hint-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+.controls-hint-item kbd {
+  display: inline-block;
+  min-width: 1.15em;
+  padding: 0.12em 0.42em;
+  border: 1px solid rgba(255, 244, 228, 0.28);
+  border-radius: 0.25rem;
+  background: rgba(255, 244, 228, 0.1);
+  color: #fff4e4;
+  font-family: inherit;
+  font-size: 0.9em;
+  font-weight: 500;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.controls-hint-label {
+  opacity: 0.92;
+}
+
+body.shot #controls-hint,
+body.settings-open #controls-hint,
+html.legal-reading #controls-hint {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  transition: none;
+}
+
+/* Keep clear of the Fly button on the right. */
+body.touch-mode #controls-hint {
+  bottom: max(1.35rem, calc(env(safe-area-inset-bottom) + 0.35rem));
+  max-width: min(28rem, calc(100vw - 7.5rem));
+  padding-left: 0.95rem;
+  padding-right: 0.95rem;
+  font-size: 0.9rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #controls-hint {
+    transition: none;
+  }
+}

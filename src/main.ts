@@ -20,6 +20,7 @@ import { RavenView } from "./gfx/raven";
 import { TitleScreen } from "./gfx/title";
 import { initLegalOverlay, isLegalOpen } from "./legal/overlay";
 import { BootScreen, yieldPaint } from "./ui/boot";
+import { ControlsHint } from "./ui/controlsHint";
 import { installMobileGuards } from "./ui/mobileGuards";
 import { SettingsMenu } from "./ui/settings";
 import { TouchControls } from "./ui/touchControls";
@@ -110,6 +111,7 @@ async function main(): Promise<void> {
   const sky = new Sky(scene, home.skyRng);
   const weather = new Weather(home.weatherRng, params.get("weather"));
 
+
   // The home island is built outright behind the loading bar, the way it
   // always was. Every island after this one streams in while you are flying.
   // The build yields hundreds of times; letting the page paint on a stopwatch
@@ -165,12 +167,16 @@ async function main(): Promise<void> {
   initLegalOverlay((on) => audio.setSilent(on));
 
   let touchUi: TouchControls | null = null;
+  const controlsHint = shotMode ? null : new ControlsHint(touchMode);
 
   controls.onFirstInteract = () => {
     if (!shotMode) audio.start();
     title.dismiss();
     document.body.classList.add("playing");
-    if (!shotMode) touchUi?.show();
+    if (!shotMode) {
+      touchUi?.show();
+      controlsHint?.show();
+    }
   };
   controls.onGesture = () => {
     if (!shotMode) audio.resume();
@@ -220,6 +226,7 @@ async function main(): Promise<void> {
     onOpenChange: (open) => {
       controls.setEnabled(!open);
       audio.setMuffled(open);
+      if (open) controlsHint?.dismiss();
       if (!open && controls.hasInteracted && !controls.touchMode) {
         queueMicrotask(() => {
           if (!settings.isOpen && !isLegalOpen()) controls.requestLock();
@@ -235,6 +242,7 @@ async function main(): Promise<void> {
     const prompt = document.getElementById("prompt");
     if (prompt) prompt.textContent = "Tap to start";
     settings.setTouchMode(true);
+    controlsHint?.setTouchMode(true);
     installMobileGuards({
       canvas: renderer.domElement,
       isMenuOpen: () => settings.isOpen || isLegalOpen(),

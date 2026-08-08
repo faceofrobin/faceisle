@@ -58,6 +58,10 @@ export class Creatures {
       cycleLen: 1.7,
       sway: 1.5,
     });
+    // Snow falls where there is snow on the ground, which is the snow line and
+    // not a fixed height. A caldera's landmark site is the lake at the bottom
+    // of it, so anchoring to bare height put falling snow over open water on a
+    // green rim.
     const snowAnchors: THREE.Vector3[] = [];
     for (let i = 0; i < 900 && snowAnchors.length < 60; i++) {
       const a = rng.range(0, Math.PI * 2);
@@ -65,7 +69,7 @@ export class Creatures {
       const x = terrain.peakSite.x + Math.cos(a) * d;
       const z = terrain.peakSite.z + Math.sin(a) * d;
       const h = terrain.heightAt(x, z);
-      if (h < 12) continue;
+      if (h < terrain.snowline - 4) continue;
       snowAnchors.push(new THREE.Vector3(x, h, z));
     }
     this.snow = createDrift(scene, rng, snowAnchors, {

@@ -1,7 +1,7 @@
 import * as THREE from "../gl";
 import { Rng } from "../util/random";
 import { DayCycle } from "./daycycle";
-import { DEEP_SEA } from "./terrain";
+import { DEEP_SEA, Landmark } from "./terrain";
 import { Detail, Island, IslandSite, siteKey } from "./island";
 import { CreatureSounds } from "./creatures/common";
 
@@ -26,6 +26,28 @@ const FAR_OUT = 1900;
 /** Islands are *known* — queryable, unbuilt — well past what is drawn. */
 const KNOWN_IN = 2600;
 const KNOWN_OUT = 3000;
+
+/**
+ * What an island is known by. Weighted so a plain mountain is still the most
+ * common thing to find — if every island had something extraordinary on it,
+ * none of them would.
+ */
+const LANDMARKS: [Landmark, number][] = [
+  ["peak", 0.26],
+  ["caldera", 0.2],
+  ["spire", 0.2],
+  ["colossus", 0.17],
+  ["elder", 0.17],
+];
+
+function pickLandmark(roll: number): Landmark {
+  let acc = 0;
+  for (const [kind, weight] of LANDMARKS) {
+    acc += weight;
+    if (roll < acc) return kind;
+  }
+  return "peak";
+}
 
 /** Cells to sweep for sites, enough to cover `KNOWN_OUT` plus jitter. */
 const SCAN = 4;
@@ -101,6 +123,7 @@ export class Archipelago {
         radius: 300,
         relief: 1,
         snowline: 17.5,
+        landmark: "peak",
         home: true,
       };
     }
@@ -117,6 +140,7 @@ export class Archipelago {
       // the surface, so the generator never produces a reef you cannot land on.
       relief: rng.range(0.62, 1.32),
       snowline: 17.5 * rng.range(0.85, 1.15),
+      landmark: pickLandmark(rng.next()),
       seed: (rng.next() * 4294967296) >>> 0,
       home: false,
     };

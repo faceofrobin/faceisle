@@ -186,8 +186,12 @@ export class WebGLRenderer {
   setAnimationLoop(callback: (() => void) | null): void {
     if (!callback) return;
     const tick = (): void => {
-      callback();
+      // Re-armed before the frame runs, not after. A throw anywhere in the
+      // game used to take the rAF chain with it and the whole thing stopped
+      // dead — one bad frame should cost a frame, not the session. The error
+      // still reaches the console, so nothing is being hidden.
       requestAnimationFrame(tick);
+      callback();
     };
     requestAnimationFrame(tick);
   }

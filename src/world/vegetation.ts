@@ -106,11 +106,15 @@ export class Vegetation {
     };
     const minDist = 3.6;
     const buckets = new Map<number, { x: number; z: number }[]>();
+    // Keyed on island-local cells. World coordinates run to kilometres out in
+    // the archipelago, which would push the key past the ±2048 this packing
+    // allows and start folding distant islands' cells onto each other.
+    const cellOf = (v: number, origin: number) => Math.floor((v - origin) / minDist);
     const bucketKey = (i: number, j: number) => (i + 2048) * 4096 + (j + 2048);
     const tooCloseTo = (x: number, z: number, d: number): boolean => {
       const span = Math.ceil(d / minDist);
-      const ci = Math.floor(x / minDist);
-      const cj = Math.floor(z / minDist);
+      const ci = cellOf(x, this.cx);
+      const cj = cellOf(z, this.cz);
       for (let i = -span; i <= span; i++) {
         for (let j = -span; j <= span; j++) {
           const b = buckets.get(bucketKey(ci + i, cj + j));
@@ -126,7 +130,7 @@ export class Vegetation {
     };
 
     const insert = (x: number, z: number): void => {
-      const ck = bucketKey(Math.floor(x / minDist), Math.floor(z / minDist));
+      const ck = bucketKey(cellOf(x, this.cx), cellOf(z, this.cz));
       const bucket = buckets.get(ck);
       if (bucket) bucket.push({ x, z });
       else buckets.set(ck, [{ x, z }]);
@@ -378,7 +382,9 @@ export class Vegetation {
       const b = terrain.biomeAt(x, z);
       if (b.marsh > 0.55) continue;
       if (terrain.forestAt(x, z) > 0.58) continue;
-      const v = Math.floor(meadow * 31 + x * 0.05) % 5;
+      // Island-local, and forced positive: world x goes negative out west, and
+      // JavaScript's `%` keeps the sign, which indexes off the end of the list.
+      const v = Math.abs(Math.floor(meadow * 31 + (x - this.cx) * 0.05)) % 5;
       flowersByVariant[v].push({
         x,
         y: h,

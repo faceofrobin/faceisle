@@ -4,6 +4,8 @@ A quiet procedural island you walk in the browser. Day fades into night, the win
 
 Press <kbd>Space</kbd> and you become a raven. The haze draws back as you climb, and the other islands are out there — a sea of them, each with its own weather of trees and stone. Land on one and it is yours to walk.
 
+Every island is known by one large thing, and you can tell which from a long way off: a snowed peak, a needle of rock, a caldera with a still lake inside it, one enormous tree alone on a hill, or a weathered figure facing out to sea.
+
 Terrain, creatures, and sound are all generated at runtime by a small custom engine. The whole game is **200 KB** of code and art, and the sea of islands is a pure function of one seed — nothing is stored, so it goes on as far as you care to fly.
 
 [Play on itch.io](https://kengocodes.itch.io/isle) · [Play in browser](https://isle-gamma.vercel.app/) · [Source](https://github.com/kengocodes/isle)
