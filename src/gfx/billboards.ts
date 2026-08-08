@@ -73,7 +73,7 @@ export class SpriteBatcher {
     uFogFar: { value: 320 },
   };
 
-  addBatch(scene: THREE.Scene, sprite: PixelSprite, items: Placement[]): void {
+  addBatch(scene: THREE.Object3D, sprite: PixelSprite, items: Placement[]): void {
     if (items.length === 0) return;
     const base = new THREE.PlaneGeometry(1, 1);
     base.translate(0, 0.5, 0);

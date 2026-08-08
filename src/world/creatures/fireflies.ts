@@ -32,7 +32,7 @@ export class Fireflies {
   private phase: Float32Array;
   private base: Float32Array;
 
-  constructor(scene: THREE.Scene, forestSpots: THREE.Vector3[], rng: Rng) {
+  constructor(scene: THREE.Object3D, forestSpots: THREE.Vector3[], rng: Rng) {
     const anchors = forestSpots.length > 0 ? forestSpots : [new THREE.Vector3()];
     const N = 230;
     this.home = new Float32Array(N * 3);

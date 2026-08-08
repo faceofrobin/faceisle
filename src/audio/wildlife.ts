@@ -302,6 +302,107 @@ export function footstep(
   }
 }
 
+/**
+ * One wingbeat: a body of air shoved downward, and the flutter of primaries at
+ * the end of the stroke. Two filtered noise bursts, the second offset — the
+ * gap between them is what makes it a wing rather than a footstep in the sky.
+ */
+export function wingbeat(
+  ctx: AudioContext,
+  out: Send,
+  o: Common & { peak: number; noise: AudioBuffer; effort: number },
+): void {
+  const t = o.when;
+  const vary = 0.86 + Math.random() * 0.28;
+  const p = ctx.createStereoPanner();
+  p.pan.value = clampPan(o.pan ?? 0);
+  p.connect(out.dry);
+  const send = ctx.createGain();
+  send.gain.value = 0.3;
+  p.connect(send);
+  send.connect(out.wet);
+
+  // The push. Low, wide and slow to open, like a sail filling.
+  burst(ctx, o.noise, p, {
+    type: 'lowpass',
+    hz: (330 + o.effort * 190) * vary,
+    q: 0.55,
+    peak: o.peak * (0.5 + o.effort * 0.4),
+    attack: 0.035,
+    decay: 0.19 * vary,
+    when: t,
+  });
+
+  // The feathers, riding on top and gone almost at once.
+  burst(ctx, o.noise, p, {
+    type: 'bandpass',
+    hz: 1900 * vary,
+    q: 0.9,
+    peak: o.peak * 0.2 * vary,
+    attack: 0.02,
+    decay: 0.1,
+    when: t + 0.04,
+  });
+}
+
+/**
+ * The raven's own call — the note that marks the change of shape. Two rasped
+ * pulses on a falling pitch, made the way the game makes everything: an
+ * oscillator, a filter and an envelope.
+ */
+export function caw(
+  ctx: AudioContext,
+  out: Send,
+  o: Common & { peak: number },
+): void {
+  const t = o.when;
+  const p = ctx.createStereoPanner();
+  p.pan.value = clampPan(o.pan ?? 0);
+  p.connect(out.dry);
+  const send = ctx.createGain();
+  send.gain.value = 0.55;
+  p.connect(send);
+  send.connect(out.wet);
+
+  const throat = ctx.createBiquadFilter();
+  throat.type = 'bandpass';
+  throat.frequency.value = 1250;
+  throat.Q.value = 2.2;
+  throat.connect(p);
+
+  for (let i = 0; i < 2; i++) {
+    const at = t + i * 0.19;
+    const base = (430 - i * 45) * (0.96 + Math.random() * 0.08);
+    const osc = ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(base * 1.16, at);
+    osc.frequency.exponentialRampToValueAtTime(base * 0.8, at + 0.15);
+
+    // A slow rasp across the note is the whole difference between a crow and
+    // a car horn.
+    const rasp = ctx.createOscillator();
+    rasp.type = 'square';
+    rasp.frequency.value = 52 + Math.random() * 14;
+    const raspDepth = ctx.createGain();
+    raspDepth.gain.value = base * 0.11;
+    rasp.connect(raspDepth);
+    raspDepth.connect(osc.frequency);
+    rasp.start(at);
+    rasp.stop(at + 0.2);
+
+    const g = ctx.createGain();
+    const peak = o.peak * (i === 0 ? 1 : 0.7);
+    const floor = Math.max(peak * 1e-3, 1e-6);
+    g.gain.setValueAtTime(floor, at);
+    g.gain.linearRampToValueAtTime(peak, at + 0.018);
+    g.gain.exponentialRampToValueAtTime(floor, at + 0.16);
+    osc.connect(g);
+    g.connect(throat);
+    osc.start(at);
+    osc.stop(at + 0.18);
+  }
+}
+
 interface BurstOpts {
   type: BiquadFilterType;
   hz: number;

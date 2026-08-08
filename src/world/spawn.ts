@@ -8,6 +8,8 @@ export interface SpawnPoint {
 }
 
 export function findSpawn(terrain: Terrain, rng: Rng): SpawnPoint {
+  const cx = terrain.centerX;
+  const cz = terrain.centerZ;
   const startAngle = rng.range(0, Math.PI * 2);
   for (let i = 0; i < 300; i++) {
     const a = startAngle + i * 0.13;
@@ -16,15 +18,19 @@ export function findSpawn(terrain: Terrain, rng: Rng): SpawnPoint {
       r > terrain.islandRadius * 0.4;
       r -= 4
     ) {
-      const x = Math.cos(a) * r;
-      const z = Math.sin(a) * r;
+      const x = cx + Math.cos(a) * r;
+      const z = cz + Math.sin(a) * r;
       const h = terrain.heightAt(x, z);
       if (h > 0.5 && h < 1.6 && terrain.slopeAt(x, z) < 0.3) {
-        return { pos: new THREE.Vector3(x, h, z), yaw: Math.atan2(x, z) };
+        // Face inland, so the first thing you see is the island.
+        return {
+          pos: new THREE.Vector3(x, h, z),
+          yaw: Math.atan2(x - cx, z - cz),
+        };
       }
     }
   }
-  return { pos: new THREE.Vector3(0, terrain.heightAt(0, 0), 0), yaw: 0 };
+  return { pos: new THREE.Vector3(cx, terrain.heightAt(cx, cz), cz), yaw: 0 };
 }
 
 export function applyGoto(

@@ -1,11 +1,24 @@
 import * as THREE from "../gl";
 import { DayCycle } from "./daycycle";
-import { Terrain } from "./terrain";
+import { Archipelago } from "./archipelago";
+import { Island } from "./island";
 import { SNAP_GLSL } from "../gfx/post";
 
-const HEIGHT_TEX_SIZE = 256;
-const HEIGHT_EXTENT = 260;
+/**
+ * The coastline is read from a height field baked around the player rather
+ * than around one island. 384 texels over a 760 m window is 1.98 m each —
+ * about one cell of the shader's chunky grid, which is what the teeth need.
+ */
+const HEIGHT_TEX_SIZE = 384;
+const HEIGHT_EXTENT = 380;
 const HEIGHT_RANGE = 8;
+/** Re-bake once the player has walked far enough for the window to matter. */
+const REBAKE_AT = 90;
+/** Rows per slice; the whole bake is ~150k height samples, so it is spread. */
+const BAKE_ROWS = 12;
+
+/** Half-width of the surface. It follows the camera, so this is the horizon. */
+const PLANE_REACH = 1800;
 
 const VERT = `
 varying vec3 vWorld;
@@ -47,7 +60,9 @@ uniform float uFogNear;
 uniform float uFogFar;
 uniform float uTime;
 uniform sampler2D uHeight;
+uniform vec2 uHeightCenter;
 uniform float uInvExtent;
+uniform float uAerial;
 varying vec3 vWorld;
 varying float vFogDepth;
 ${SNAP_GLSL}
@@ -67,9 +82,13 @@ void main() {
   // field of speckle everywhere the bottom is gentle.
   vec2 cell = floor(p / 2.2);
   vec2 wob = (vec2(hash(cell), hash(cell + 17.3)) - 0.5) * 3.4;
-  vec2 huv = clamp((p + wob) * uInvExtent * 0.5 + 0.5, 0.0, 1.0);
-  float th = texture2D(uHeight, huv).r * ${HEIGHT_RANGE}.0 - ${HEIGHT_RANGE / 2}.0;
-  float depth = -th;
+  vec2 huv = (p + wob - uHeightCenter) * uInvExtent * 0.5 + 0.5;
+  // Past the baked window there is nothing but open sea. Clamping to the edge
+  // texel instead would drag the nearest coastline out to the horizon.
+  float inside = step(0.0, huv.x) * step(huv.x, 1.0)
+               * step(0.0, huv.y) * step(huv.y, 1.0);
+  float th = texture2D(uHeight, clamp(huv, 0.0, 1.0)).r * ${HEIGHT_RANGE}.0 - ${HEIGHT_RANGE / 2}.0;
+  float depth = mix(${HEIGHT_RANGE / 2}.0, -th, inside);
 
   // One flat colour. No pale shallow band: Proteus's water meets the sand on a
   // hard edge and stays the same tone right up to it, and the moment you add a
@@ -80,9 +99,16 @@ void main() {
   // Only the far distance moves off that tone, and then in flat steps rather
   // than a wash — the boundaries nudged per cell so the rings read as drawn
   // edges instead of the contour lines they really are.
+  //
+  // Both parts are for an eye at head height, where the steps land as broad
+  // rings on the water. Seen from the air the rings turn edge-on: a whole ring
+  // collapses into a pixel row, and the per-cell nudge that made it look drawn
+  // shatters it into a field of horizontal dashes. So the bands go as you
+  // climb, and the sea below becomes the one flat tone it should have been.
   vec3 far = mix(uLight, uHorizon, 0.55);
-  float band = floor(clamp((vFogDepth + (hash(cell + 5.1) - 0.5) * 14.0) / 130.0, 0.0, 2.0));
-  col = mix(col, far, band * 0.13);
+  float jitter = (hash(cell + 5.1) - 0.5) * 14.0 * (1.0 - uAerial);
+  float band = floor(clamp((vFogDepth + jitter) / 130.0, 0.0, 2.0));
+  col = mix(col, far, band * 0.13 * (1.0 - uAerial));
 
   // Foam: short bright dashes on open water, drifting a fraction of a metre a
   // second. The only moving thing on the surface, and the only pixels that
@@ -105,9 +131,40 @@ void main() {
 export class Water {
   readonly mesh: THREE.Mesh;
   private mat: THREE.ShaderMaterial;
+  private world: Archipelago;
 
-  constructor(scene: THREE.Scene, terrain: Terrain) {
-    const heightTex = this.bakeHeightTexture(terrain);
+  /**
+   * Two buffers: the shader keeps reading the last finished window while the
+   * next one fills in behind it. Swapping the centre and the pixels together
+   * is what makes the move invisible — both windows agree about the height
+   * everywhere they overlap, because it comes from the same analytic terrain.
+   */
+  private tex: THREE.DataTexture;
+  private front: Uint8Array;
+  private back: Uint8Array;
+  private bakeRow = HEIGHT_TEX_SIZE;
+  private bakeX = 0;
+  private bakeZ = 0;
+  private bakeIslands: Island[] = [];
+  private centerX = 0;
+  private centerZ = 0;
+
+  constructor(scene: THREE.Object3D, world: Archipelago, x: number, z: number) {
+    this.world = world;
+    const N = HEIGHT_TEX_SIZE;
+    this.front = new Uint8Array(N * N);
+    this.back = new Uint8Array(N * N);
+    this.tex = new THREE.DataTexture(
+      this.front,
+      N,
+      N,
+      THREE.RedFormat,
+      THREE.UnsignedByteType,
+    );
+    this.tex.magFilter = THREE.LinearFilter;
+    this.tex.minFilter = THREE.LinearFilter;
+    this.tex.wrapS = THREE.ClampToEdgeWrapping;
+    this.tex.wrapT = THREE.ClampToEdgeWrapping;
 
     this.mat = new THREE.ShaderMaterial({
       vertexShader: VERT,
@@ -120,48 +177,76 @@ export class Water {
         uFogNear: { value: 40 },
         uFogFar: { value: 320 },
         uTime: { value: 0 },
-        uHeight: { value: heightTex },
+        uHeight: { value: this.tex },
+        uHeightCenter: { value: new THREE.Vector2(x, z) },
         uInvExtent: { value: 1 / HEIGHT_EXTENT },
+        uAerial: { value: 0 },
       },
     });
-    const geo = new THREE.PlaneGeometry(2600, 2600, 1, 1);
+    const geo = new THREE.PlaneGeometry(PLANE_REACH * 2, PLANE_REACH * 2, 1, 1);
     geo.rotateX(-Math.PI / 2);
     this.mesh = new THREE.Mesh(geo, this.mat);
-    this.mesh.position.y = 0;
     this.mesh.frustumCulled = false;
     scene.add(this.mesh);
+
+    // The first window is baked outright — there is a loading bar to hide it,
+    // and the shore has to be right in the very first frame.
+    this.beginBake(x, z);
+    while (this.bakeRow < HEIGHT_TEX_SIZE) this.bakeSlice(HEIGHT_TEX_SIZE);
+    this.commitBake();
   }
 
-  private bakeHeightTexture(terrain: Terrain): THREE.DataTexture {
+  private beginBake(x: number, z: number): void {
+    this.bakeX = x;
+    this.bakeZ = z;
+    this.bakeRow = 0;
+    this.world.islandsNear(x, z, HEIGHT_EXTENT * 1.5, this.bakeIslands);
+  }
+
+  private bakeSlice(rows: number): void {
     const N = HEIGHT_TEX_SIZE;
-    const data = new Uint8Array(N * N);
-    for (let j = 0; j < N; j++) {
-      const z = (j / (N - 1)) * 2 * HEIGHT_EXTENT - HEIGHT_EXTENT;
+    const end = Math.min(N, this.bakeRow + rows);
+    const step = (2 * HEIGHT_EXTENT) / (N - 1);
+    const x0 = this.bakeX - HEIGHT_EXTENT;
+    const z0 = this.bakeZ - HEIGHT_EXTENT;
+    for (let j = this.bakeRow; j < end; j++) {
+      const z = z0 + j * step;
       for (let i = 0; i < N; i++) {
-        const x = (i / (N - 1)) * 2 * HEIGHT_EXTENT - HEIGHT_EXTENT;
-        const h = THREE.MathUtils.clamp(
-          terrain.heightAt(x, z),
-          -HEIGHT_RANGE / 2,
-          HEIGHT_RANGE / 2,
-        );
-        data[j * N + i] = Math.round(
+        const x = x0 + i * step;
+        let h = -HEIGHT_RANGE / 2;
+        for (const island of this.bakeIslands) {
+          if (!island.terrain.covers(x, z)) continue;
+          const sample = island.terrain.heightAt(x, z);
+          if (sample > h) h = sample;
+        }
+        h = THREE.MathUtils.clamp(h, -HEIGHT_RANGE / 2, HEIGHT_RANGE / 2);
+        this.back[j * N + i] = Math.round(
           ((h + HEIGHT_RANGE / 2) / HEIGHT_RANGE) * 255,
         );
       }
     }
-    const tex = new THREE.DataTexture(
-      data,
-      N,
-      N,
-      THREE.RedFormat,
-      THREE.UnsignedByteType,
+    this.bakeRow = end;
+  }
+
+  /**
+   * Show the finished window. Centre and pixels change in the same frame, and
+   * both windows agree about the height everywhere they overlap — they read
+   * the same analytic terrain — so the coastline does not move at the swap.
+   */
+  private commitBake(): void {
+    const shown = this.front;
+    this.front = this.back;
+    // The buffer the texture was reading has been uploaded; it becomes the one
+    // the next bake fills. A bake never starts in the same frame as a commit.
+    this.back = shown;
+    (this.tex.image as { data: ArrayBufferView | null }).data = this.front;
+    this.tex.needsUpdate = true;
+    this.centerX = this.bakeX;
+    this.centerZ = this.bakeZ;
+    (this.mat.uniforms.uHeightCenter.value as THREE.Vector2).set(
+      this.centerX,
+      this.centerZ,
     );
-    tex.magFilter = THREE.LinearFilter;
-    tex.minFilter = THREE.LinearFilter;
-    tex.wrapS = THREE.ClampToEdgeWrapping;
-    tex.wrapT = THREE.ClampToEdgeWrapping;
-    tex.needsUpdate = true;
-    return tex;
   }
 
   /**
@@ -170,7 +255,27 @@ export class Water {
    * sea changes colour through the day without the shader knowing where the
    * sun is.
    */
-  update(time: number, day: DayCycle, fog: THREE.Fog): void {
+  update(
+    time: number,
+    day: DayCycle,
+    fog: THREE.Fog,
+    eye: THREE.Vector3,
+  ): void {
+    // World-space shading, so sliding the quad under the camera is seamless.
+    this.mesh.position.set(eye.x, 0, eye.z);
+    this.mat.uniforms.uAerial.value = THREE.MathUtils.clamp(
+      (eye.y - 30) / 90,
+      0,
+      1,
+    );
+
+    if (this.bakeRow < HEIGHT_TEX_SIZE) {
+      this.bakeSlice(BAKE_ROWS);
+      if (this.bakeRow >= HEIGHT_TEX_SIZE) this.commitBake();
+    } else if (Math.hypot(eye.x - this.centerX, eye.z - this.centerZ) > REBAKE_AT) {
+      this.beginBake(eye.x, eye.z);
+    }
+
     const u = this.mat.uniforms;
     u.uTime.value = time;
     (u.uDeep.value as THREE.Color).copy(day.waterDeep);

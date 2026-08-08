@@ -4,12 +4,32 @@ import { Rng } from "../util/random";
 import { snapMaterial } from "../gfx/post";
 import { GROUND, RegionSample, posterize, washGround } from "./palette";
 
-const SIZE = 680;
-const SEGMENTS = 320;
+/** The island the game shipped with: 300 m of land, a 680 m plane, 2.1 m quads. */
+const HOME_RADIUS = 300;
+const PLANE_OVERSHOOT = 680 / HOME_RADIUS;
+const FULL_QUAD = 2.125;
+const FAR_QUAD = 9;
+
+/** Sea floor beyond the island's reach, and what open ocean reads as. */
+export const DEEP_SEA = -3.2;
 
 export interface BiomeWeights {
   autumn: number;
   marsh: number;
+}
+
+/**
+ * How one island differs from another. Every field defaults to the values the
+ * single-island game used, so a given seed still generates the island it always
+ * did — the archipelago varies islands through this, not by touching the noise.
+ */
+export interface IslandShape {
+  centerX?: number;
+  centerZ?: number;
+  radius?: number;
+  /** Multiplies hills, massif and peak. Below 1 gives low sandy skerries. */
+  relief?: number;
+  snowline?: number;
 }
 
 const AUTUMN_ANG = 1.95;
@@ -23,10 +43,11 @@ const WARP_MAX = 0.55;
 const TWO_PI = Math.PI * 2;
 
 export class Terrain {
-  readonly mesh: THREE.Mesh;
   readonly material: THREE.MeshBasicMaterial;
-  readonly islandRadius = 300;
-  readonly snowline = 17.5;
+  readonly islandRadius: number;
+  readonly snowline: number;
+  readonly centerX: number;
+  readonly centerZ: number;
   readonly peakSite: THREE.Vector3;
 
   private heightNoise: Noise2D;
@@ -40,8 +61,13 @@ export class Terrain {
   private baseAngle: number;
   private peakX: number;
   private peakZ: number;
+  private relief: number;
+  /** Island size relative to the home island, for distances tuned against it. */
+  private k: number;
+  private planeSize: number;
 
-  constructor(rng: Rng) {
+  constructor(rng: Rng, shape: IslandShape = {}) {
+    // Noise draw order is load-bearing: it is what makes `?seed=` reproducible.
     this.heightNoise = new Noise2D(rng.fork());
     this.maskNoise = new Noise2D(rng.fork());
     this.forestNoise = new Noise2D(rng.fork());
@@ -52,52 +78,93 @@ export class Terrain {
     this.tintNoise = new Noise2D(paintRng.fork());
     this.edgeNoise = new Noise2D(paintRng.fork());
     this.baseAngle = rng.range(0, TWO_PI);
+
+    this.centerX = shape.centerX ?? 0;
+    this.centerZ = shape.centerZ ?? 0;
+    this.islandRadius = shape.radius ?? HOME_RADIUS;
+    this.relief = shape.relief ?? 1;
+    this.snowline = shape.snowline ?? 17.5;
+    this.k = this.islandRadius / HOME_RADIUS;
+    this.planeSize = this.islandRadius * PLANE_OVERSHOOT;
+
     const pr = this.islandRadius * 0.22;
     this.peakX = Math.cos(this.baseAngle + PEAK_ANG) * pr;
     this.peakZ = Math.sin(this.baseAngle + PEAK_ANG) * pr;
+    const peakWorldX = this.peakX + this.centerX;
+    const peakWorldZ = this.peakZ + this.centerZ;
     this.peakSite = new THREE.Vector3(
-      this.peakX,
-      this.heightAt(this.peakX, this.peakZ),
-      this.peakZ,
+      peakWorldX,
+      this.heightAt(peakWorldX, peakWorldZ),
+      peakWorldZ,
     );
     this.material = new THREE.MeshBasicMaterial({
       vertexColors: true,
       fog: true,
     });
     snapMaterial(this.material);
-    this.mesh = this.buildMesh();
+  }
+
+  /** Vertices per side for a mesh that walks well up close. */
+  get fullSegments(): number {
+    return Math.max(32, Math.round(this.planeSize / FULL_QUAD));
+  }
+
+  /** Vertices per side for a silhouette seen from the air. */
+  get farSegments(): number {
+    return Math.max(16, Math.round(this.planeSize / FAR_QUAD));
+  }
+
+  /** Distance from this island's centre, in metres. */
+  distanceTo(x: number, z: number): number {
+    const dx = x - this.centerX;
+    const dz = z - this.centerZ;
+    return Math.sqrt(dx * dx + dz * dz);
+  }
+
+  /**
+   * True where this island, rather than open sea, owns the ground. Squared —
+   * the water bake asks this a hundred thousand times per window.
+   */
+  covers(x: number, z: number): boolean {
+    const dx = x - this.centerX;
+    const dz = z - this.centerZ;
+    const reach = this.islandRadius * 1.35;
+    return dx * dx + dz * dz <= reach * reach;
   }
 
   heightAt(x: number, z: number): number {
-    const dist = Math.sqrt(x * x + z * z);
-    if (dist > this.islandRadius * 1.35) return -3.2;
+    const lx = x - this.centerX;
+    const lz = z - this.centerZ;
+    const dist = Math.sqrt(lx * lx + lz * lz);
+    if (dist > this.islandRadius * 1.35) return DEEP_SEA;
 
     const n = this.heightNoise;
-    const hills = n.fbm(x * 0.012, z * 0.012, 4) * 7.5;
+    const hills = n.fbm(lx * 0.012, lz * 0.012, 4) * 7.5;
     const massif = Math.max(
       0,
-      n.fbm(x * 0.0032 + 13.7, z * 0.0032 - 4.1, 3) * 19,
+      n.fbm(lx * 0.0032 + 13.7, lz * 0.0032 - 4.1, 3) * 19,
     );
 
-    const marsh = this.wedgeAt(x, z, dist, MARSH_ANG, MARSH_HALF, true);
+    const marsh = this.wedgeAt(lx, lz, dist, MARSH_ANG, MARSH_HALF, true);
     const damped = hills * (1 - 0.5 * marsh) + massif * (1 - 0.85 * marsh);
 
-    const dpx = x - this.peakX;
-    const dpz = z - this.peakZ;
+    const dpx = lx - this.peakX;
+    const dpz = lz - this.peakZ;
     const d2 = dpx * dpx + dpz * dpz;
     const peak = d2 < 30000 ? 24 * Math.exp(-d2 / 3600) : 0;
 
     const warp =
-      this.maskNoise.fbm(x * 0.008 + 71.3, z * 0.008 + 29.9, 3) * 0.22;
+      this.maskNoise.fbm(lx * 0.008 + 71.3, lz * 0.008 + 29.9, 3) * 0.22;
     const r = dist / this.islandRadius + warp;
     const falloff = 1 - THREE.MathUtils.smoothstep(r, 0.42, 1.02);
-    let h = (damped + peak + 5.5) * falloff * falloff - 3.2;
+    let h =
+      ((damped + peak) * this.relief + 5.5) * falloff * falloff + DEEP_SEA;
 
     if (marsh > 0.001) {
       h = THREE.MathUtils.lerp(h, 0.9, 0.45 * marsh);
       if (h > -0.6) {
         const pool = THREE.MathUtils.smoothstep(
-          this.poolNoise.fbm(x * 0.021, z * 0.021, 2),
+          this.poolNoise.fbm(lx * 0.021, lz * 0.021, 2),
           0.18,
           0.55,
         );
@@ -115,16 +182,20 @@ export class Terrain {
   }
 
   forestAt(x: number, z: number): number {
+    const lx = x - this.centerX;
+    const lz = z - this.centerZ;
     return THREE.MathUtils.clamp(
-      this.forestNoise.fbm(x * 0.011 + 3.1, z * 0.011 - 8.7, 3) * 0.5 + 0.5,
+      this.forestNoise.fbm(lx * 0.011 + 3.1, lz * 0.011 - 8.7, 3) * 0.5 + 0.5,
       0,
       1,
     );
   }
 
   meadowAt(x: number, z: number): number {
+    const lx = x - this.centerX;
+    const lz = z - this.centerZ;
     return THREE.MathUtils.clamp(
-      this.meadowNoise.fbm(x * 0.016 - 11.3, z * 0.016 + 5.9, 3) * 0.5 + 0.5,
+      this.meadowNoise.fbm(lx * 0.016 - 11.3, lz * 0.016 + 5.9, 3) * 0.5 + 0.5,
       0,
       1,
     );
@@ -147,60 +218,81 @@ export class Terrain {
   }
 
   biomeAt(x: number, z: number): BiomeWeights {
-    const dist = Math.sqrt(x * x + z * z);
+    const lx = x - this.centerX;
+    const lz = z - this.centerZ;
+    const dist = Math.sqrt(lx * lx + lz * lz);
     return {
-      autumn: this.wedgeAt(x, z, dist, AUTUMN_ANG, AUTUMN_HALF, false),
-      marsh: this.wedgeAt(x, z, dist, MARSH_ANG, MARSH_HALF, true),
+      autumn: this.wedgeAt(lx, lz, dist, AUTUMN_ANG, AUTUMN_HALF, false),
+      marsh: this.wedgeAt(lx, lz, dist, MARSH_ANG, MARSH_HALF, true),
     };
   }
 
+  /** Takes island-local coordinates; the public samplers convert first. */
   private wedgeAt(
-    x: number,
-    z: number,
+    lx: number,
+    lz: number,
     dist: number,
     center: number,
     half: number,
     avoidPeak: boolean,
   ): number {
-    if (dist < 34) return 0;
-    let a = Math.atan2(z, x) - this.baseAngle - center;
+    const k = this.k;
+    if (dist < 34 * k) return 0;
+    let a = Math.atan2(lz, lx) - this.baseAngle - center;
     a = ((a % TWO_PI) + TWO_PI) % TWO_PI;
     if (a > Math.PI) a = TWO_PI - a;
     if (a > half + EDGE_SOFT + WARP_MAX) return 0;
     const warp =
-      this.biomeWarp.fbm(x * 0.005 + 31.7, z * 0.005 - 17.3, 2) * WARP_MAX;
+      this.biomeWarp.fbm(lx * 0.005 + 31.7, lz * 0.005 - 17.3, 2) * WARP_MAX;
     let w =
       1 -
       THREE.MathUtils.smoothstep(a + warp, half - EDGE_SOFT, half + EDGE_SOFT);
     if (w <= 0) return 0;
-    w *= THREE.MathUtils.smoothstep(dist, 34, 80);
+    w *= THREE.MathUtils.smoothstep(dist, 34 * k, 80 * k);
     if (avoidPeak && w > 0) {
-      const dpx = x - this.peakX;
-      const dpz = z - this.peakZ;
+      const dpx = lx - this.peakX;
+      const dpz = lz - this.peakZ;
       w *= THREE.MathUtils.smoothstep(
         Math.sqrt(dpx * dpx + dpz * dpz),
-        100,
-        170,
+        100 * k,
+        170 * k,
       );
     }
     return w;
   }
 
-  private buildMesh(): THREE.Mesh {
+  /**
+   * Build the ground mesh a slice at a time.
+   *
+   * Colouring a face is the expensive half — a slope needs four extra height
+   * samples, and biome weights need four more noise walks on top. At full
+   * detail that is a couple of hundred thousand faces, well past a frame. The
+   * caller pumps this generator against a millisecond budget so an island can
+   * assemble itself while the player is still flying towards it.
+   */
+  *build(segments: number): Generator<void, THREE.Mesh, void> {
+    const size = this.planeSize;
     let geo: THREE.BufferGeometry = new THREE.PlaneGeometry(
-      SIZE,
-      SIZE,
-      SEGMENTS,
-      SEGMENTS,
+      size,
+      size,
+      segments,
+      segments,
     );
     geo.rotateX(-Math.PI / 2);
+    yield;
 
     const pos = geo.getAttribute("position") as THREE.BufferAttribute;
+    const rowStride = segments + 1;
     for (let i = 0; i < pos.count; i++) {
-      pos.setY(i, this.heightAt(pos.getX(i), pos.getZ(i)));
+      const x = pos.getX(i) + this.centerX;
+      const z = pos.getZ(i) + this.centerZ;
+      pos.setXYZ(i, x, this.heightAt(x, z), z);
+      if (i % (rowStride * 8) === rowStride * 8 - 1) yield;
     }
+    yield;
 
     geo = geo.toNonIndexed();
+    yield;
 
     const p = geo.getAttribute("position") as THREE.BufferAttribute;
     const colors = new Float32Array(p.count * 3);
@@ -215,6 +307,7 @@ export class Terrain {
         colors[(i + v) * 3 + 1] = c.g;
         colors[(i + v) * 3 + 2] = c.b;
       }
+      if (i % 3072 === 0) yield;
     }
     geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
 
@@ -227,15 +320,19 @@ export class Terrain {
   private sample: RegionSample = blankSample();
 
   private patch(x: number, z: number, scale = 0.024, salt = 0): number {
+    const lx = x - this.centerX;
+    const lz = z - this.centerZ;
     return THREE.MathUtils.clamp(
-      this.tintNoise.fbm(x * scale + salt, z * scale - salt, 2) * 0.8 + 0.5,
+      this.tintNoise.fbm(lx * scale + salt, lz * scale - salt, 2) * 0.8 + 0.5,
       0,
       1,
     );
   }
 
   private edge(x: number, z: number, scale = 0.05, salt = 0): number {
-    return this.edgeNoise.fbm(x * scale + salt, z * scale + salt, 2);
+    const lx = x - this.centerX;
+    const lz = z - this.centerZ;
+    return this.edgeNoise.fbm(lx * scale + salt, lz * scale + salt, 2);
   }
 
   private faceColor(out: THREE.Color, x: number, y: number, z: number): void {

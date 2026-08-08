@@ -14,7 +14,7 @@ const BASE = process.argv[2] ?? "http://127.0.0.1:5173";
 const W = 1600;
 const H = 900;
 
-/** @type {{ name: string, setup: string }[]} */
+/** @type {{ name: string, setup: string, settle?: number }[]} */
 const SHOTS = [
   {
     name: "dawn",
@@ -59,6 +59,17 @@ const SHOTS = [
       i.goto(140, 40, -1.2, -0.05);
     }`,
   },
+  {
+    name: "flight",
+    // The haze only draws back once the raven has been up a while, so this one
+    // needs longer on the clock than the others before the shutter.
+    settle: 5200,
+    setup: `() => {
+      const i = window.__isle;
+      i.day.t = 0.34; i.day.update(0);
+      i.aloft(150, 250, 240, 0.5, -0.24);
+    }`,
+  },
 ];
 
 async function main() {
@@ -90,7 +101,7 @@ async function main() {
       const fn = new Function(`return (${fnSrc})`)();
       fn();
     }, shot.setup);
-    await page.waitForTimeout(600);
+    await page.waitForTimeout(shot.settle ?? 600);
 
     const path = resolve(OUT, `${shot.name}.png`);
     await canvas.screenshot({ path, type: "png" });

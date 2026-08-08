@@ -114,20 +114,26 @@ export class PixelatePass {
     (this.mat.uniforms.uRes.value as THREE.Vector2).set(cols, rows);
   }
 
+  /**
+   * Overlays are drawn flat over the world, in order, before the downsample —
+   * so the title and the raven's wings land on the same pixel grid and the
+   * same colour ladder as everything else.
+   */
   render(
     renderer: THREE.WebGLRenderer,
     scene: THREE.Scene,
     camera: THREE.Camera,
-    overlay?: THREE.Scene | null,
+    ...overlays: (THREE.Scene | null | undefined)[]
   ): void {
     renderer.setRenderTarget(this.rt);
     renderer.render(scene, camera);
-    if (overlay) {
-      const prev = renderer.autoClear;
+    const prev = renderer.autoClear;
+    for (const overlay of overlays) {
+      if (!overlay) continue;
       renderer.autoClear = false;
       renderer.render(overlay, this.quadCam);
-      renderer.autoClear = prev;
     }
+    renderer.autoClear = prev;
     renderer.setRenderTarget(null);
     renderer.render(this.quadScene, this.quadCam);
   }

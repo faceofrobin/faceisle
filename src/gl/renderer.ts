@@ -127,7 +127,8 @@ export class WebGLRenderer {
   private nextProgramId = 1;
   private buffers = new Map<BufferAttribute, { buffer: WebGLBuffer; version: number }>();
   private indexBuffers = new Map<BufferAttribute, WebGLBuffer>();
-  private vaos = new Map<string, WebGLVertexArrayObject>();
+  /** Geometry id → program id → VAO, so a geometry's VAOs can be found to free. */
+  private vaos = new Map<number, Map<number, WebGLVertexArrayObject>>();
   private textures = new Map<Texture, WebGLTexture>();
   private targets = new Map<WebGLRenderTarget, TargetInfo>();
 
@@ -373,8 +374,12 @@ export class WebGLRenderer {
     program: ProgramInfo,
   ): WebGLVertexArrayObject {
     const gl = this.gl;
-    const key = `${geometry.id}:${program.id}`;
-    const cached = this.vaos.get(key);
+    let byProgram = this.vaos.get(geometry.id);
+    if (!byProgram) {
+      byProgram = new Map();
+      this.vaos.set(geometry.id, byProgram);
+    }
+    const cached = byProgram.get(program.id);
     if (cached) return cached;
 
     const vao = gl.createVertexArray();
@@ -402,8 +407,50 @@ export class WebGLRenderer {
     }
 
     gl.bindVertexArray(null);
-    this.vaos.set(key, vao);
+    byProgram.set(program.id, vao);
     return vao;
+  }
+
+  // ---- releasing --------------------------------------------------------
+
+  /**
+   * Hand a geometry's GL objects back to the driver.
+   *
+   * The caches above are keyed by object identity and never expire on their
+   * own, which costs nothing for a world built once at boot. Islands stream in
+   * and out, so theirs have to be freed explicitly — a full island's terrain is
+   * ~15 MB of vertex buffers, and a few crossings would exhaust the GPU.
+   *
+   * Only call this for geometry the caller owns outright. Sprites all share one
+   * quad, so releasing a sprite's geometry would blank every other sprite.
+   */
+  releaseGeometry(geometry: BufferGeometry): void {
+    const gl = this.gl;
+    const byProgram = this.vaos.get(geometry.id);
+    if (byProgram) {
+      for (const vao of byProgram.values()) gl.deleteVertexArray(vao);
+      this.vaos.delete(geometry.id);
+    }
+    for (const name in geometry.attributes) {
+      const entry = this.buffers.get(geometry.attributes[name]);
+      if (!entry) continue;
+      gl.deleteBuffer(entry.buffer);
+      this.buffers.delete(geometry.attributes[name]);
+    }
+    if (geometry.index) {
+      const buffer = this.indexBuffers.get(geometry.index);
+      if (buffer) {
+        gl.deleteBuffer(buffer);
+        this.indexBuffers.delete(geometry.index);
+      }
+    }
+  }
+
+  releaseTexture(texture: Texture): void {
+    const handle = this.textures.get(texture);
+    if (!handle) return;
+    this.gl.deleteTexture(handle);
+    this.textures.delete(texture);
   }
 
   // ---- textures ---------------------------------------------------------
@@ -512,9 +559,14 @@ export class WebGLRenderer {
       );
       if (info.depth) {
         gl.bindRenderbuffer(gl.RENDERBUFFER, info.depth);
+        // 24-bit, not 16. At sixteen bits the depth resolution a few hundred
+        // metres out is tens of metres, which is more than the three metres
+        // between the sea surface and the sea floor beneath it — the sea floor
+        // then punches through the water in stripes. It never showed while the
+        // fog stopped at 330 m; from the air it is the whole horizon.
         gl.renderbufferStorage(
           gl.RENDERBUFFER,
-          gl.DEPTH_COMPONENT16,
+          gl.DEPTH_COMPONENT24,
           target.width,
           target.height,
         );

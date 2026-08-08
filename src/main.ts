@@ -1,13 +1,10 @@
 import * as THREE from "./gl";
 import { Rng } from "./util/random";
 import { DayCycle } from "./world/daycycle";
-import { Terrain } from "./world/terrain";
+import { Archipelago } from "./world/archipelago";
 import { Water } from "./world/water";
 import { Sky } from "./world/sky";
 import { Weather } from "./world/weather";
-import { Vegetation } from "./world/vegetation";
-import { Stones } from "./world/stones";
-import { Creatures } from "./world/creatures";
 import { findSpawn, applyGoto } from "./world/spawn";
 import { hazeTint } from "./world/palette";
 import { probeShore } from "./world/shore";
@@ -19,6 +16,7 @@ import {
 import { AudioEngine } from "./audio/engine";
 import type { Ground } from "./audio/wildlife";
 import { PixelatePass } from "./gfx/post";
+import { RavenView } from "./gfx/raven";
 import { TitleScreen } from "./gfx/title";
 import { initLegalOverlay, isLegalOpen } from "./legal/overlay";
 import { BootScreen, yieldPaint } from "./ui/boot";
@@ -33,6 +31,20 @@ const params = new URLSearchParams(location.search);
  *  `?shot=cover` — same framing hooks, but keep the title logo on screen. */
 const shotMode = params.has("shot");
 const coverShot = params.get("shot") === "cover";
+
+/** Fog on foot, and the distance it opens to once you are up and flying. */
+const FOG_NEAR = 45;
+const FOG_FAR = 330;
+const FOG_NEAR_AIR = 190;
+const FOG_FAR_AIR = 1480;
+/** The height at which the haze has fully drawn back. */
+const OPEN_AT = 210;
+
+const FOV_GROUND = 72;
+const FOV_DIVE = 88;
+
+/** Milliseconds a frame may spend building the next island. */
+const STREAM_BUDGET = 4.5;
 
 function parseSeed(raw: string | null): number | null {
   if (raw === null) return null;
@@ -53,7 +65,6 @@ async function main(): Promise<void> {
   const tParam = params.get("t");
   const yawParam = params.get("yaw");
   const pitchParam = params.get("pitch");
-  const rng = new Rng(seed);
   const day = new DayCycle(tParam !== null ? Number(tParam) : 0.29);
 
   boot.set(0.06, "Opening the sky…");
@@ -69,59 +80,71 @@ async function main(): Promise<void> {
   document.body.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
-  const fog = new THREE.Fog(0xffffff, 45, 330);
+  const fog = new THREE.Fog(0xffffff, FOG_NEAR, FOG_FAR);
   scene.fog = fog;
 
   const camera = new THREE.PerspectiveCamera(
-    72,
+    FOV_GROUND,
     window.innerWidth / window.innerHeight,
     0.1,
     2000,
   );
 
+  const audio = new AudioEngine();
+  const creatureSounds = {
+    frogHop: (pan: number, near: number) => audio.frogHop(pan, near),
+  };
+
   boot.set(0.16, "Shaping the hills…", true);
   await yieldPaint();
-  const terrain = new Terrain(rng);
-  scene.add(terrain.mesh);
+  const world = new Archipelago(scene, renderer, seed, creatureSounds);
+  const home = world.boot;
+  const terrain = home.terrain;
 
   boot.set(0.34, "Pouring the sea…");
   await yieldPaint();
-  const water = new Water(scene, terrain);
+  const water = new Water(scene, world, 0, 0);
 
   boot.set(0.42, "Hanging the clouds…");
   await yieldPaint();
-  const sky = new Sky(scene, rng.fork());
+  const sky = new Sky(scene, home.skyRng);
+  const weather = new Weather(home.weatherRng, params.get("weather"));
 
+  // The home island is built outright behind the loading bar, the way it
+  // always was. Every island after this one streams in while you are flying.
+  // The build yields hundreds of times; letting the page paint on a stopwatch
+  // rather than on every nth step keeps the bar moving without spending most
+  // of the boot waiting on frames.
   boot.set(0.5, "Planting the woods…", true);
   await yieldPaint();
-  const vegetation = new Vegetation(scene, terrain, rng.fork());
-
-  boot.set(0.72, "Setting the stones…");
-  await yieldPaint();
-  const stones = new Stones(scene, terrain, rng.fork());
-
-  boot.set(0.8, "Calling the wildlife…");
-  await yieldPaint();
-  const audio = new AudioEngine();
-  const creatures = new Creatures(scene, terrain, vegetation, rng.fork(), {
-    frogHop: (pan, near) => audio.frogHop(pan, near),
-  });
-  const weather = new Weather(rng.fork(), params.get("weather"));
+  const grow = home.grow("full", creatureSounds, renderer);
+  const started = performance.now();
+  let until = started + 90;
+  while (!grow.next().done) {
+    if (performance.now() < until) continue;
+    boot.set(
+      0.5 + Math.min(0.36, (performance.now() - started) / 1900),
+      "Planting the woods…",
+      true,
+    );
+    await yieldPaint();
+    until = performance.now() + 90;
+  }
 
   boot.set(0.88, "Finding a path…");
   await yieldPaint();
-  const spawn = findSpawn(terrain, rng);
+  const spawn = findSpawn(terrain, home.spawnRng);
   const gotoParam = params.get("goto");
   if (gotoParam) {
     applyGoto(
       spawn,
       gotoParam,
       {
-        cairn: stones.cairnSite,
+        cairn: home.stones?.cairnSite ?? null,
         peak: terrain.peakSite,
-        marsh: vegetation.marshSpots[0] ?? null,
-        pool: vegetation.poolSpots[0] ?? null,
-        autumn: vegetation.autumnSpots[0] ?? null,
+        marsh: home.vegetation?.marshSpots[0] ?? null,
+        pool: home.vegetation?.poolSpots[0] ?? null,
+        autumn: home.vegetation?.autumnSpots[0] ?? null,
       },
       terrain,
     );
@@ -131,13 +154,14 @@ async function main(): Promise<void> {
   const controls = new Controls(
     camera,
     renderer.domElement,
-    terrain,
+    world,
     spawn.pos,
     spawn.yaw,
   );
   if (pitchParam !== null) controls.setPitch(Number(pitchParam));
   let touchMode = prefersTouchControls();
   const title = new TitleScreen();
+  const raven = new RavenView();
   initLegalOverlay((on) => audio.setSilent(on));
 
   let touchUi: TouchControls | null = null;
@@ -153,11 +177,12 @@ async function main(): Promise<void> {
   };
 
   function groundUnder(x: number, z: number): Ground {
-    const h = terrain.heightAt(x, z);
+    const island = world.nearest(x, z);
+    const h = world.heightAt(x, z);
     if (h < 0.12) return "water";
     if (h < 1.3) return "sand";
-    if (h > terrain.snowline) return "snow";
-    if (terrain.slopeAt(x, z) > 0.62) return "rock";
+    if (h > island.terrain.snowline) return "snow";
+    if (island.terrain.slopeAt(x, z) > 0.62) return "rock";
     return "grass";
   }
 
@@ -166,6 +191,15 @@ async function main(): Promise<void> {
       groundUnder(controls.position.x, controls.position.z),
       controls.moving,
     );
+  };
+  controls.onWingbeat = () => {
+    // Hauling for height costs more air than a correction in a glide.
+    audio.wingbeat(THREE.MathUtils.clamp(1 - controls.flight.airspeed / 40, 0.2, 1));
+  };
+  controls.onSkim = () => audio.skim();
+  controls.onTakeOff = () => audio.caw();
+  controls.onLand = () => {
+    audio.footstep(groundUnder(controls.position.x, controls.position.z), 1);
   };
 
   boot.set(0.94, "Almost there…");
@@ -248,6 +282,7 @@ async function main(): Promise<void> {
     camera.updateProjectionMatrix();
     post.setSize(w, h);
     title.setSize(w, h);
+    raven.setSize(w, h);
   }
   window.addEventListener("resize", fitViewport);
   window.addEventListener("orientationchange", () => {
@@ -263,6 +298,8 @@ async function main(): Promise<void> {
   let shore = 0;
   let shoreTimer = 0;
   let elevation = 0;
+  let openness = 0;
+  let fov = FOV_GROUND;
   const here = terrain.regionAt(spawn.pos.x, spawn.pos.z);
   const haze = new THREE.Color(1, 1, 1);
   const hazeGoal = new THREE.Color(1, 1, 1);
@@ -273,13 +310,12 @@ async function main(): Promise<void> {
   day.update(0);
   weather.update(0);
   weather.apply(day);
-  terrain.material.color.copy(day.tint);
-  stones.material.color.copy(day.tint);
   fog.color.copy(day.horizon);
   controls.update(0);
+  world.update(controls.position.x, controls.position.z);
+  world.updateVisuals(0, 0, day, fog, controls.position, 0);
   sky.update(day, camera.position, 0, 0, weather);
-  water.update(0, day, fog);
-  vegetation.update(0, day, fog);
+  water.update(0, day, fog, camera.position);
   post.render(renderer, scene, camera, title.visible ? title.scene : null);
 
   await boot.finish();
@@ -291,28 +327,55 @@ async function main(): Promise<void> {
       day,
       weather,
       terrain,
+      world,
       resize(w: number, h: number) {
         renderer.setSize(w, h);
         camera.aspect = w / h;
         camera.updateProjectionMatrix();
         post.setSize(w, h);
         title.setSize(w, h);
+        raven.setSize(w, h);
       },
       setLook(yaw: number, pitch = 0) {
         controls.setYaw(yaw);
         controls.setPitch(pitch);
       },
       goto(x: number, z: number, yaw?: number, pitch?: number) {
-        controls.position.set(x, terrain.heightAt(x, z), z);
+        controls.position.set(x, world.heightAt(x, z), z);
         if (yaw !== undefined) controls.setYaw(yaw);
         if (pitch !== undefined) controls.setPitch(pitch);
       },
+      /** Hold the wings on or off, for framing shots from the air. */
+      fly(on: boolean) {
+        controls.setFlap(on);
+      },
+      /** Put the raven at an absolute height, for aerial framing. */
+      aloft(x: number, y: number, z: number, yaw?: number, pitch?: number) {
+        controls.setFlap(true);
+        controls.position.set(x, y, z);
+        if (yaw !== undefined) controls.setYaw(yaw);
+        if (pitch !== undefined) controls.setPitch(pitch);
+      },
+      state() {
+        return {
+          flying: controls.flying,
+          morph: controls.morph,
+          altitude: controls.altitude,
+          y: controls.position.y,
+          x: controls.position.x,
+          z: controls.position.z,
+          airspeed: controls.flight.airspeed,
+          islands: world.islands.size,
+          building: world.building,
+          fogFar: fog.far,
+        };
+      },
       sites: {
-        cairn: stones.cairnSite,
+        cairn: home.stones?.cairnSite ?? null,
         peak: terrain.peakSite,
-        marsh: vegetation.marshSpots[0] ?? null,
-        pool: vegetation.poolSpots[0] ?? null,
-        autumn: vegetation.autumnSpots[0] ?? null,
+        marsh: home.vegetation?.marshSpots[0] ?? null,
+        pool: home.vegetation?.poolSpots[0] ?? null,
+        autumn: home.vegetation?.autumnSpots[0] ?? null,
       },
     };
   }
@@ -327,52 +390,78 @@ async function main(): Promise<void> {
     weather.update(dt);
     weather.apply(day);
 
-    terrain.material.color.copy(day.tint);
-    stones.material.color.copy(day.tint);
+    const pos = controls.position;
+    world.update(pos.x, pos.z);
+    world.pump(STREAM_BUDGET);
+
+    // Height is what opens the world: the haze draws back as you climb, which
+    // is the moment the other islands exist. On the ground nothing changes.
+    const lift = THREE.MathUtils.clamp(controls.altitude / OPEN_AT, 0, 1);
+    const want = controls.morph * (0.25 + lift * 0.75);
+    openness += (want - openness) * (1 - Math.exp(-dt * 0.8));
 
     fog.color.copy(day.horizon);
-    fog.near = 45;
-    fog.far = 330 - weather.gloom * 110;
+    fog.near = THREE.MathUtils.lerp(FOG_NEAR, FOG_NEAR_AIR, openness);
+    fog.far =
+      THREE.MathUtils.lerp(FOG_FAR, FOG_FAR_AIR, openness) -
+      weather.gloom * 110 * (1 - openness * 0.7);
+
+    const wantFov = THREE.MathUtils.lerp(
+      FOV_GROUND,
+      FOV_DIVE,
+      controls.morph * THREE.MathUtils.clamp((controls.flight.airspeed - 20) / 26, 0, 1),
+    );
+    if (Math.abs(wantFov - fov) > 0.01) {
+      fov += (wantFov - fov) * (1 - Math.exp(-dt * 3));
+      camera.fov = fov;
+      camera.updateProjectionMatrix();
+    }
 
     shoreTimer -= dt;
     if (shoreTimer <= 0) {
       shoreTimer = 0.25;
-      shore = probeShore(terrain, controls.position.x, controls.position.z);
-      elevation = terrain.heightAt(controls.position.x, controls.position.z);
+      const island = world.nearest(pos.x, pos.z);
+      shore = probeShore(island.terrain, pos.x, pos.z);
+      elevation = world.heightAt(pos.x, pos.z);
       hazeTint(
         hazeGoal,
-        terrain.regionAt(
-          controls.position.x,
-          controls.position.z,
-          here,
-          elevation,
-        ),
-        terrain.snowline,
+        island.terrain.regionAt(pos.x, pos.z, here, elevation),
+        island.terrain.snowline,
       );
     }
     haze.lerp(hazeGoal, 1 - Math.exp(-dt * 0.9));
     fog.color.multiply(haze);
 
     sky.update(day, camera.position, time, dt, weather);
-    water.update(time, day, fog);
-    vegetation.update(time, day, fog);
-    creatures.update(dt, time, day, controls.position, camera.rotation.y);
+    water.update(time, day, fog, camera.position);
+    world.updateVisuals(dt, time, day, fog, pos, camera.rotation.y);
+    raven.update(controls.morph, controls.flight.beatPhase, controls.flight.roll, day.tint);
 
+    const island = world.nearest(pos.x, pos.z);
+    const veg = island.vegetation;
     audio.update(dt, {
       phase: day.t,
       daylight: day.daylight,
-      treesNear: vegetation.treesNear(controls.position),
-      cherriesNear: vegetation.cherriesNear(controls.position),
-      flowersNear: vegetation.flowersNear(controls.position),
+      treesNear: veg ? veg.treesNear(pos) : 0,
+      cherriesNear: veg ? veg.cherriesNear(pos) : 0,
+      flowersNear: veg ? veg.flowersNear(pos) : 0,
       shore,
       wading: THREE.MathUtils.clamp((0.12 - elevation) / 0.45, 0, 1),
-      elevation,
+      elevation: controls.flying ? Math.max(elevation, controls.altitude * 0.3) : elevation,
       gloom: weather.gloom,
       windSpeed: weather.windSpeed,
       moving: controls.moving,
+      flight: controls.morph,
+      rush: THREE.MathUtils.clamp((controls.flight.airspeed - 18) / 30, 0, 1),
     });
 
-    post.render(renderer, scene, camera, title.visible ? title.scene : null);
+    post.render(
+      renderer,
+      scene,
+      camera,
+      raven.scene.visible ? raven.scene : null,
+      title.visible ? title.scene : null,
+    );
   });
 }
 

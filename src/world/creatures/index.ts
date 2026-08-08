@@ -21,12 +21,18 @@ export class Creatures {
   private leaves: Drift | null;
   private snow: Drift | null;
 
-  constructor(scene: THREE.Scene, terrain: Terrain, veg: Vegetation, rng: Rng, sounds: CreatureSounds) {
-    this.butterflies = new Butterflies(scene, terrain, veg.flowerSpots, rng);
+  constructor(scene: THREE.Object3D, terrain: Terrain, veg: Vegetation, rng: Rng, sounds: CreatureSounds) {
+    // Anything with no home on this island gathers at its centre rather than
+    // at the world origin, which is another island once you leave the first.
+    const centre = new THREE.Vector3(terrain.centerX, 0, terrain.centerZ);
+    const orElse = (spots: THREE.Vector3[]): THREE.Vector3[] =>
+      spots.length > 0 ? spots : [centre];
+
+    this.butterflies = new Butterflies(scene, terrain, orElse(veg.flowerSpots), rng);
     this.frogs = new Frogs(scene, terrain, veg.marshSpots, rng, sounds);
     this.dragonflies = new Dragonflies(scene, terrain, veg.marshSpots, rng);
-    this.birds = new BirdFlocks(scene, rng);
-    this.fireflies = new Fireflies(scene, veg.forestSpots, rng);
+    this.birds = new BirdFlocks(scene, rng, centre);
+    this.fireflies = new Fireflies(scene, orElse(veg.forestSpots), rng);
 
     this.petals = createDrift(scene, rng, veg.cherrySpots, {
       hex: 0xffc2d8,

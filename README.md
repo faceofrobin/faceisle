@@ -2,12 +2,17 @@
 
 A quiet procedural island you walk in the browser. Day fades into night, the wind moves through the trees, and nothing asks you to hurry. Inspired by games like [Proteus](https://en.wikipedia.org/wiki/Proteus_(video_game)).
 
-Terrain, creatures, and sound are all generated at runtime by a small custom engine. The whole game is **400 KB**.
+Press <kbd>Space</kbd> and you become a raven. The haze draws back as you climb, and the other islands are out there — a sea of them, each with its own weather of trees and stone. Land on one and it is yours to walk.
+
+Terrain, creatures, and sound are all generated at runtime by a small custom engine. The whole game is **200 KB** of code and art, and the sea of islands is a pure function of one seed — nothing is stored, so it goes on as far as you care to fly.
 
 [Play on itch.io](https://kengocodes.itch.io/isle) · [Play in browser](https://isle-gamma.vercel.app/) · [Source](https://github.com/kengocodes/isle)
 
 ![Dawn on the shore](docs/screenshots/dawn.png)
 
+<p align="center">
+  <img src="docs/screenshots/flight.png" width="100%" alt="On the wing above the island, another island out on the horizon" />
+</p>
 <p align="center">
   <img src="docs/screenshots/midday.png" width="49%" alt="Midday hills" />
   <img src="docs/screenshots/sunset.png" width="49%" alt="Sunset shore" />
@@ -37,15 +42,18 @@ Static hosting: upload `dist/` (relative `base`, works in itch embeds). Vercel r
 
 ## Controls
 
-| Input         | Action                |
-| ------------- | --------------------- |
-| Click / tap   | Start (unlocks audio) |
-| WASD / arrows | Walk                  |
-| Mouse         | Look                  |
-| Shift         | Stroll                |
-| Esc           | Settings              |
+| Input         | On the island         | On the wing                     |
+| ------------- | --------------------- | ------------------------------- |
+| Click / tap   | Start (unlocks audio) |                                 |
+| Mouse         | Look                  | Steer — you go where you point  |
+| WASD / arrows | Walk                  | Tuck or spread, and bank        |
+| Space         | Take to the air       | Beat your wings and climb       |
+| Shift         | Stroll                | Fold your wings and stoop       |
+| Esc           | Settings              | Settings                        |
 
-Touch devices get an on-screen stick; drag elsewhere to look.
+Let go of <kbd>Space</kbd> to glide. Come down on land and you walk again; come down on water and you skim it and beat away. Diving trades height for speed, so a long crossing is a climb and then a long quiet fall.
+
+Touch devices get an on-screen stick and a **Fly** button; drag elsewhere to look.
 
 Shareable islands use query params, e.g. `?seed=A7C3E911&t=0.26&weather=clear&goto=marsh`.
 

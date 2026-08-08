@@ -4,7 +4,7 @@ import { Drone } from './drone';
 import { NightChorus, Surf, Wind, makeBedNoise } from './beds';
 import { Melody, TONIC, keyAt, midiToHz, type KeyState } from './theory';
 import { Send, bowed, place, struck } from './voices';
-import { Ground, bird, cricket, footstep, frog } from './wildlife';
+import { Ground, bird, caw, cricket, footstep, frog, wingbeat } from './wildlife';
 import { capPeak } from './envelope';
 
 const MASTER_LEVEL = 0.85;
@@ -23,6 +23,10 @@ export interface WorldSound {
   gloom: number;
   windSpeed: number;
   moving: number;
+  /** 0 on foot, 1 in the air — opens the world out and brings the air up. */
+  flight: number;
+  /** Airspeed as a fraction of a hard dive, for the rush past the ears. */
+  rush: number;
 }
 
 export class AudioEngine {
@@ -251,9 +255,13 @@ export class AudioEngine {
     }
     const t = ctx.currentTime;
 
-    const canopy = Math.min(1, w.treesNear / 15);
+    const canopy = Math.min(1, w.treesNear / 15) * (1 - w.flight);
     const height = Math.min(1, Math.max(0, w.elevation) / 22);
-    const openness = clamp01((1 - canopy) * 0.7 + height * 0.3 + w.shore * 0.2);
+    // Nothing is near you in the air: the canopy drops away, the reverb opens
+    // to its widest, and what is left is the sound of moving through air.
+    const openness = clamp01(
+      (1 - canopy) * 0.7 + height * 0.3 + w.shore * 0.2 + w.flight * 0.5,
+    );
     const night = 1 - w.daylight;
 
     this.stillT = w.moving < 0.12 ? this.stillT + dt : 0;
@@ -287,8 +295,14 @@ export class AudioEngine {
       1.5,
     );
 
-    this.surf.update(w.shore, w.wading);
-    this.wind.update(dt, clamp01(openness * 0.7 + height * 0.5), canopy, w.windSpeed);
+    this.surf.update(w.shore * (1 - w.flight * 0.75), w.wading);
+    // Flying is its own wind. A dive doubles what the weather is doing.
+    this.wind.update(
+      dt,
+      clamp01(openness * 0.7 + height * 0.5 + w.flight * 0.4),
+      canopy,
+      w.windSpeed + w.rush * w.flight * 7,
+    );
     this.chorus.update(night * night, 1 - w.gloom);
 
     if (this.lastPhase >= 0) {
@@ -418,6 +432,43 @@ export class AudioEngine {
       peak: capPeak(0.085),
       pan,
       near,
+    });
+  }
+
+  /** `effort` 0 gliding, 1 hauling for height. */
+  wingbeat(effort = 1): void {
+    const ctx = this.ctx;
+    if (!ctx || ctx.state !== 'running') return;
+    this.stepFoot = -this.stepFoot;
+    wingbeat(ctx, this.sfxSend, {
+      when: ctx.currentTime,
+      peak: capPeak(0.088),
+      // Alternating a little left and right of centre reads as two wings.
+      pan: this.stepFoot * 0.1,
+      noise: this.stepNoise,
+      effort,
+    });
+  }
+
+  /** The call that marks becoming, or ceasing to be, a raven. */
+  caw(): void {
+    const ctx = this.ctx;
+    if (!ctx || ctx.state !== 'running') return;
+    caw(ctx, this.sfxSend, {
+      when: ctx.currentTime + 0.02,
+      peak: capPeak(0.07),
+      pan: -0.08,
+    });
+  }
+
+  /** Water struck at speed and left behind — a raven refusing to land on it. */
+  skim(): void {
+    const ctx = this.ctx;
+    if (!ctx || ctx.state !== 'running') return;
+    footstep(ctx, this.sfxSend, 'water', {
+      when: ctx.currentTime,
+      peak: capPeak(0.1),
+      noise: this.stepNoise,
     });
   }
 

@@ -15,6 +15,7 @@ export class TouchControls {
   private canvas: HTMLElement;
   private stickId: number | null = null;
   private lookId: number | null = null;
+  private flyId: number | null = null;
   private originX = 0;
   private originY = 0;
   private lastLookX = 0;
@@ -37,6 +38,8 @@ export class TouchControls {
     this.root.setAttribute("aria-hidden", "true");
     this.root.innerHTML = `
       <button type="button" class="touch-pause" id="btn-touch-pause">Pause</button>
+      <button type="button" class="touch-fly" id="btn-touch-fly"
+              aria-label="Fly">Fly</button>
       <div class="touch-joyzone" aria-hidden="true">
         <div class="touch-joy"><div class="touch-joy-knob"></div></div>
       </div>`;
@@ -55,8 +58,43 @@ export class TouchControls {
       this.onPause();
     });
 
+    this.bindFly(this.root.querySelector("#btn-touch-fly") as HTMLElement);
     this.bindStick();
     this.bindLook();
+  }
+
+  /**
+   * Held, not tapped: the first press leaves the ground and holding it on beats
+   * the wings, which is the same contract the space bar has.
+   */
+  private bindFly(button: HTMLElement): void {
+    const press = (e: PointerEvent): void => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (this.flyId !== null) return;
+      this.flyId = e.pointerId;
+      button.classList.add("on");
+      try {
+        button.setPointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
+      this.controls.setFlap(true);
+    };
+    const release = (e?: PointerEvent): void => {
+      if (e && e.pointerId !== this.flyId) return;
+      this.flyId = null;
+      button.classList.remove("on");
+      this.controls.setFlap(false);
+    };
+    button.addEventListener("pointerdown", press);
+    button.addEventListener("pointerup", release);
+    button.addEventListener("pointercancel", release);
+    button.addEventListener("lostpointercapture", release);
+    window.addEventListener("blur", () => release());
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) release();
+    });
   }
 
   show(): void {
@@ -152,7 +190,7 @@ export class TouchControls {
       if (this.lookId !== null || e.button !== 0) return;
       if (
         (e.target as HTMLElement).closest?.(
-          "#touch-ui, #footer-links, #settings, #legal",
+          "#touch-ui, #btn-touch-fly, #footer-links, #settings, #legal",
         )
       ) {
         return;

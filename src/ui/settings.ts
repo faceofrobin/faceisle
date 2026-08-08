@@ -215,8 +215,18 @@ const MARKUP = `
         <ul class="set-keys" id="set-keys" aria-labelledby="set-h-keys">
           <li><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> or arrows — walk</li>
           <li><kbd>Shift</kbd> — stroll</li>
+          <li><kbd>Space</kbd> — take to the air as a raven</li>
           <li>Click — look around</li>
           <li><kbd>Esc</kbd> — open or close this menu</li>
+        </ul>
+
+        <h4 class="set-subh" id="set-h-wing">On the wing</h4>
+        <ul class="set-keys" id="set-wing" aria-labelledby="set-h-wing">
+          <li><kbd>Space</kbd> — beat your wings and climb</li>
+          <li>Look — where you point is where you go; dive to gather speed</li>
+          <li><kbd>W</kbd> <kbd>S</kbd> — tuck or spread; <kbd>A</kbd> <kbd>D</kbd> — bank</li>
+          <li><kbd>Shift</kbd> — fold your wings and stoop</li>
+          <li>Let go and come down on land to walk again</li>
         </ul>
       </section>
 
@@ -296,8 +306,15 @@ export class SettingsMenu {
       this.$("#set-keys").innerHTML = `
           <li><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> or arrows — walk</li>
           <li><kbd>Shift</kbd> — stroll</li>
+          <li><kbd>Space</kbd> — take to the air as a raven</li>
           <li>Click — look around</li>
           <li><kbd>Esc</kbd> — open or close this menu</li>`;
+      this.$("#set-wing").innerHTML = `
+          <li><kbd>Space</kbd> — beat your wings and climb</li>
+          <li>Look — where you point is where you go; dive to gather speed</li>
+          <li><kbd>W</kbd> <kbd>S</kbd> — tuck or spread; <kbd>A</kbd> <kbd>D</kbd> — bank</li>
+          <li><kbd>Shift</kbd> — fold your wings and stoop</li>
+          <li>Let go and come down on land to walk again</li>`;
       return;
     }
     this.$("#set-hint").textContent =
@@ -305,7 +322,13 @@ export class SettingsMenu {
     this.$("#set-keys").innerHTML = `
       <li>Left side — drag to walk (stick appears under your thumb)</li>
       <li>Drag elsewhere — look around</li>
+      <li>Fly — hold to take off, and to beat your wings</li>
       <li>Pause — open or close this menu</li>`;
+    this.$("#set-wing").innerHTML = `
+      <li>Fly — hold to climb, let go to glide down</li>
+      <li>Drag to look; where you point is where you go</li>
+      <li>Stick — tuck, spread and bank</li>
+      <li>Come down on land to walk again</li>`;
   }
 
   get current(): SettingsValues {

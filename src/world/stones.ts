@@ -26,12 +26,14 @@ export class Stones {
   cairnSite: THREE.Vector3 | null = null;
   readonly material: THREE.MeshBasicMaterial;
 
-  constructor(scene: THREE.Scene, terrain: Terrain, rng: Rng) {
+  constructor(scene: THREE.Object3D, terrain: Terrain, rng: Rng) {
     const ROCK = new THREE.Color(0x8d8578);
     const ROCK_DARK = new THREE.Color(0x6b6459);
     const MOSS = new THREE.Color(0x6e9a4e);
     const LICHEN = new THREE.Color(0x9aa387);
     const R = terrain.islandRadius;
+    const CX = terrain.centerX;
+    const CZ = terrain.centerZ;
     const specs: StoneSpec[] = [];
     const tmp = new THREE.Matrix4();
 
@@ -55,8 +57,8 @@ export class Stones {
 
     let placed = 0;
     for (let i = 0; i < 6000 && placed < 42; i++) {
-      const x = rng.range(-R, R);
-      const z = rng.range(-R, R);
+      const x = CX + rng.range(-R, R);
+      const z = CZ + rng.range(-R, R);
       const h = terrain.heightAt(x, z);
       const slope = terrain.slopeAt(x, z);
       if (h < 7.5 || h > 20 || slope > 0.6) continue;
@@ -66,8 +68,8 @@ export class Stones {
     }
     let erratics = 0;
     for (let i = 0; i < 6000 && erratics < 12; i++) {
-      const x = rng.range(-R, R);
-      const z = rng.range(-R, R);
+      const x = CX + rng.range(-R, R);
+      const z = CZ + rng.range(-R, R);
       const h = terrain.heightAt(x, z);
       if (h < 2 || h > 7 || terrain.slopeAt(x, z) > 0.25) continue;
       if (terrain.forestAt(x, z) > 0.62) continue;
@@ -78,8 +80,8 @@ export class Stones {
 
     let peak = { x: 0, z: 0, h: -Infinity };
     for (let i = 0; i < 4000; i++) {
-      const x = rng.range(-R * 0.6, R * 0.6);
-      const z = rng.range(-R * 0.6, R * 0.6);
+      const x = CX + rng.range(-R * 0.6, R * 0.6);
+      const z = CZ + rng.range(-R * 0.6, R * 0.6);
       const h = terrain.heightAt(x, z);
       if (h > peak.h) peak = { x, z, h };
     }

@@ -14,7 +14,7 @@ export interface DriftOptions {
   sway: number;
 }
 
-export function createDrift(scene: THREE.Scene, rng: Rng, anchors: THREE.Vector3[], opt: DriftOptions): Drift | null {
+export function createDrift(scene: THREE.Object3D, rng: Rng, anchors: THREE.Vector3[], opt: DriftOptions): Drift | null {
   if (anchors.length === 0) return null;
   return new Drift(scene, rng, anchors, opt);
 }
@@ -27,7 +27,7 @@ export class Drift {
   private seed: Float32Array;
   private opt: DriftOptions;
 
-  constructor(scene: THREE.Scene, rng: Rng, anchors: THREE.Vector3[], opt: DriftOptions) {
+  constructor(scene: THREE.Object3D, rng: Rng, anchors: THREE.Vector3[], opt: DriftOptions) {
     this.opt = opt;
     const P = Math.min(opt.max, anchors.length * opt.perAnchor);
     this.anchor = new Float32Array(P * 3);

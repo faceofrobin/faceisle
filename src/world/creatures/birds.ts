@@ -14,9 +14,13 @@ interface Flock {
 export class BirdFlocks {
   private flocks: Flock[] = [];
   private mats: FramePair;
+  private cx: number;
+  private cz: number;
 
-  constructor(scene: THREE.Scene, rng: Rng) {
+  constructor(scene: THREE.Object3D, rng: Rng, center: THREE.Vector3) {
     this.mats = frameMaterials(makeBirdTextures());
+    this.cx = center.x;
+    this.cz = center.z;
     for (let f = 0; f < 3; f++) {
       const flock: Flock = {
         center: rng.range(0, Math.PI * 2),
@@ -48,9 +52,9 @@ export class BirdFlocks {
         const a = flock.center + bird.phaseOffset * 0.4;
         const r = flock.radius + bird.radiusOffset;
         bird.sprite.position.set(
-          Math.cos(a) * r,
+          this.cx + Math.cos(a) * r,
           flock.height + Math.sin(time * 0.8 + bird.phaseOffset * 5) * 3,
-          Math.sin(a) * r,
+          this.cz + Math.sin(a) * r,
         );
         const frame = Math.sin(time * 9 + bird.phaseOffset * 7) > 0 ? 0 : 1;
         bird.sprite.material = this.mats[frame];

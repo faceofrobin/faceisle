@@ -21,7 +21,7 @@ export class Dragonflies {
   private terrain: Terrain;
   private scratch = new THREE.Vector3();
 
-  constructor(scene: THREE.Scene, terrain: Terrain, marshSpots: THREE.Vector3[], rng: Rng) {
+  constructor(scene: THREE.Object3D, terrain: Terrain, marshSpots: THREE.Vector3[], rng: Rng) {
     this.terrain = terrain;
     this.mats.push(frameMaterials(makeDragonflyTextures(0x2f6f74)));
     this.mats.push(frameMaterials(makeDragonflyTextures(0x8f3a4a)));

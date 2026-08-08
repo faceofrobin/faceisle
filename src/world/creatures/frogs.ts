@@ -20,7 +20,7 @@ export class Frogs {
   private terrain: Terrain;
   private sounds: CreatureSounds;
 
-  constructor(scene: THREE.Scene, terrain: Terrain, marshSpots: THREE.Vector3[], rng: Rng, sounds: CreatureSounds) {
+  constructor(scene: THREE.Object3D, terrain: Terrain, marshSpots: THREE.Vector3[], rng: Rng, sounds: CreatureSounds) {
     this.terrain = terrain;
     this.sounds = sounds;
     this.mats = frameMaterials(makeFrogTextures());
@@ -36,8 +36,8 @@ export class Frogs {
       } else {
         const a = rng.range(0, Math.PI * 2);
         const r = rng.range(terrain.islandRadius * 0.3, terrain.islandRadius);
-        x = Math.cos(a) * r;
-        z = Math.sin(a) * r;
+        x = terrain.centerX + Math.cos(a) * r;
+        z = terrain.centerZ + Math.sin(a) * r;
       }
       const h = terrain.heightAt(x, z);
       if (h < 0.15 || h > 0.9) continue;

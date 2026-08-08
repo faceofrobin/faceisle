@@ -28,6 +28,9 @@ export class Vegetation {
   readonly poolSpots: THREE.Vector3[] = [];
 
   private terrain!: Terrain;
+  /** Island centre. Every placement samples a square around it, not the origin. */
+  private cx = 0;
+  private cz = 0;
   private sample: RegionSample = {
     height: 0,
     slope: 0,
@@ -49,25 +52,47 @@ export class Vegetation {
     return out;
   }
 
-  constructor(scene: THREE.Scene, terrain: Terrain, rng: Rng) {
-    this.terrain = terrain;
+  /**
+   * Plant an island, a slice at a time.
+   *
+   * Placement is rejection sampling — a hundred and seventy thousand candidate
+   * points, each asking the terrain for its height, slope, forest and biome —
+   * which lands somewhere near a fifth of a second. That is fine behind a
+   * loading bar and not fine mid-flight, so the passes yield often enough for
+   * the streamer to fit them into whatever is left of a frame.
+   *
+   * Draw order from `rng` is unchanged, so a given seed plants the same island.
+   */
+  static *grow(
+    scene: THREE.Object3D,
+    terrain: Terrain,
+    rng: Rng,
+  ): Generator<void, Vegetation, void> {
+    const veg = new Vegetation();
+    veg.terrain = terrain;
+    veg.cx = terrain.centerX;
+    veg.cz = terrain.centerZ;
     const R = terrain.islandRadius;
-    const elders = this.placeTrees(scene, terrain, rng, R);
-    this.placeBushes(scene, terrain, rng, R);
-    this.placeFlowers(scene, terrain, rng, R);
-    this.placeGrassAccents(scene, terrain, rng, R);
-    this.placeReeds(scene, terrain, rng, R);
-    this.buildLilyPads(scene, terrain, rng, R);
-    this.placeMushrooms(scene, terrain, rng, elders);
-    this.placeDuneGrass(scene, terrain, rng, R);
+    const elders = yield* veg.placeTrees(scene, terrain, rng, R);
+    yield* veg.placeBushes(scene, terrain, rng, R);
+    yield* veg.placeFlowers(scene, terrain, rng, R);
+    yield* veg.placeGrassAccents(scene, terrain, rng, R);
+    yield* veg.placeReeds(scene, terrain, rng, R);
+    yield* veg.buildLilyPads(scene, terrain, rng, R);
+    yield* veg.placeMushrooms(scene, terrain, rng, elders);
+    yield* veg.placeDuneGrass(scene, terrain, rng, R);
+    return veg;
   }
 
-  private placeTrees(
-    scene: THREE.Scene,
+  /** Use {@link Vegetation.grow}; instances are only ever made by it. */
+  private constructor() {}
+
+  private *placeTrees(
+    scene: THREE.Object3D,
     terrain: Terrain,
     rng: Rng,
     R: number,
-  ): { x: number; z: number }[] {
+  ): Generator<void, { x: number; z: number }[], void> {
     const treesByKind: Record<TreeKind, Placement[]> = {
       green: [],
       lime: [],
@@ -109,8 +134,9 @@ export class Vegetation {
 
     const elders: { x: number; z: number }[] = [];
     for (let i = 0; i < 6000 && elders.length < 16; i++) {
-      const x = rng.range(-R, R);
-      const z = rng.range(-R, R);
+      if ((i & 511) === 0) yield;
+      const x = this.cx + rng.range(-R, R);
+      const z = this.cz + rng.range(-R, R);
       const h = terrain.heightAt(x, z);
       if (h < 2 || h > 9.5) continue;
       if (terrain.slopeAt(x, z) > 0.35) continue;
@@ -143,8 +169,9 @@ export class Vegetation {
     let attempts = 0;
     while (treeCount < 1500 && attempts < 52000) {
       attempts++;
-      const x = rng.range(-R, R);
-      const z = rng.range(-R, R);
+      if ((attempts & 511) === 0) yield;
+      const x = this.cx + rng.range(-R, R);
+      const z = this.cz + rng.range(-R, R);
       const h = terrain.heightAt(x, z);
       if (h < 1.4 || h > 15) continue;
       if (terrain.slopeAt(x, z) > 0.42) continue;
@@ -197,8 +224,9 @@ export class Vegetation {
 
     let snowpines = 0;
     for (let i = 0; i < 14000 && snowpines < 90; i++) {
-      const x = rng.range(-R, R);
-      const z = rng.range(-R, R);
+      if ((i & 511) === 0) yield;
+      const x = this.cx + rng.range(-R, R);
+      const z = this.cz + rng.range(-R, R);
       const h = terrain.heightAt(x, z);
       if (h < 13.5 || h > 20) continue;
       if (terrain.slopeAt(x, z) > 0.55) continue;
@@ -220,8 +248,9 @@ export class Vegetation {
 
     let willows = 0;
     for (let i = 0; i < 22000 && willows < 70; i++) {
-      const x = rng.range(-R, R);
-      const z = rng.range(-R, R);
+      if ((i & 511) === 0) yield;
+      const x = this.cx + rng.range(-R, R);
+      const z = this.cz + rng.range(-R, R);
       const b = terrain.biomeAt(x, z);
       if (b.marsh < 0.45) continue;
       const h = terrain.heightAt(x, z);
@@ -293,16 +322,17 @@ export class Vegetation {
     return elders;
   }
 
-  private placeBushes(
-    scene: THREE.Scene,
+  private *placeBushes(
+    scene: THREE.Object3D,
     terrain: Terrain,
     rng: Rng,
     R: number,
-  ): void {
+  ): Generator<void, void, void> {
     const bushes: Placement[] = [];
     for (let i = 0; i < 5000 && bushes.length < 380; i++) {
-      const x = rng.range(-R, R);
-      const z = rng.range(-R, R);
+      if ((i & 511) === 0) yield;
+      const x = this.cx + rng.range(-R, R);
+      const z = this.cz + rng.range(-R, R);
       const h = terrain.heightAt(x, z);
       if (h < 1.1 || h > 12 || terrain.slopeAt(x, z) > 0.48) continue;
       const b = terrain.biomeAt(x, z);
@@ -330,16 +360,17 @@ export class Vegetation {
     }
   }
 
-  private placeFlowers(
-    scene: THREE.Scene,
+  private *placeFlowers(
+    scene: THREE.Object3D,
     terrain: Terrain,
     rng: Rng,
     R: number,
-  ): void {
+  ): Generator<void, void, void> {
     const flowersByVariant: Placement[][] = [[], [], [], [], []];
     for (let i = 0; i < 14000; i++) {
-      const x = rng.range(-R, R);
-      const z = rng.range(-R, R);
+      if ((i & 511) === 0) yield;
+      const x = this.cx + rng.range(-R, R);
+      const z = this.cz + rng.range(-R, R);
       const h = terrain.heightAt(x, z);
       if (h < 0.9 || h > 10 || terrain.slopeAt(x, z) > 0.35) continue;
       const meadow = terrain.meadowAt(x, z);
@@ -360,8 +391,9 @@ export class Vegetation {
       if (rng.chance(0.08)) this.flowerSpots.push(new THREE.Vector3(x, h, z));
     }
     for (let i = 0; i < 4000 && this.flowerSpots.length < 28; i++) {
-      const x = rng.range(-R, R);
-      const z = rng.range(-R, R);
+      if ((i & 511) === 0) yield;
+      const x = this.cx + rng.range(-R, R);
+      const z = this.cz + rng.range(-R, R);
       const h = terrain.heightAt(x, z);
       if (h < 1 || h > 9 || terrain.slopeAt(x, z) > 0.35) continue;
       if (terrain.meadowAt(x, z) < 0.65) continue;
@@ -378,18 +410,19 @@ export class Vegetation {
     }
   }
 
-  private placeGrassAccents(
-    scene: THREE.Scene,
+  private *placeGrassAccents(
+    scene: THREE.Object3D,
     terrain: Terrain,
     rng: Rng,
     R: number,
-  ): void {
+  ): Generator<void, void, void> {
     const grassA: Placement[] = [];
     const grassB: Placement[] = [];
     const marshGrass: Placement[] = [];
     for (let i = 0; i < 8000 && grassA.length + grassB.length < 45; i++) {
-      const x = rng.range(-R, R);
-      const z = rng.range(-R, R);
+      if ((i & 511) === 0) yield;
+      const x = this.cx + rng.range(-R, R);
+      const z = this.cz + rng.range(-R, R);
       const h = terrain.heightAt(x, z);
       if (h < 0.85 || h > 1.55 || terrain.slopeAt(x, z) > 0.35) continue;
       if (terrain.biomeAt(x, z).marsh > 0.45) continue;
@@ -408,8 +441,9 @@ export class Vegetation {
     this.sprites.addBatch(scene, makeGrassTexture(rng), grassB);
     const SEDGE_PALETTE = [0x3f7a3a, 0x528c46, 0x699e52];
     for (let i = 0; i < 6000 && marshGrass.length < 35; i++) {
-      const x = rng.range(-R, R);
-      const z = rng.range(-R, R);
+      if ((i & 511) === 0) yield;
+      const x = this.cx + rng.range(-R, R);
+      const z = this.cz + rng.range(-R, R);
       const b = terrain.biomeAt(x, z);
       if (b.marsh < 0.5) continue;
       const h = terrain.heightAt(x, z);
@@ -439,16 +473,17 @@ export class Vegetation {
     );
   }
 
-  private placeReeds(
-    scene: THREE.Scene,
+  private *placeReeds(
+    scene: THREE.Object3D,
     terrain: Terrain,
     rng: Rng,
     R: number,
-  ): void {
+  ): Generator<void, void, void> {
     const reeds: Placement[] = [];
     for (let i = 0; i < 30000 && reeds.length < 380; i++) {
-      const x = rng.range(-R, R);
-      const z = rng.range(-R, R);
+      if ((i & 511) === 0) yield;
+      const x = this.cx + rng.range(-R, R);
+      const z = this.cz + rng.range(-R, R);
       const h = terrain.heightAt(x, z);
       if (h < 0.1 || h > 0.7) continue;
       if (terrain.slopeAt(x, z) > 0.35) continue;
@@ -507,16 +542,17 @@ export class Vegetation {
     }
   }
 
-  private buildLilyPads(
-    scene: THREE.Scene,
+  private *buildLilyPads(
+    scene: THREE.Object3D,
     terrain: Terrain,
     rng: Rng,
     R: number,
-  ): void {
+  ): Generator<void, void, void> {
     const pads: { x: number; z: number; r: number }[] = [];
     for (let i = 0; i < 22000 && pads.length < 140; i++) {
-      const x = rng.range(-R, R);
-      const z = rng.range(-R, R);
+      if ((i & 511) === 0) yield;
+      const x = this.cx + rng.range(-R, R);
+      const z = this.cz + rng.range(-R, R);
       const b = terrain.biomeAt(x, z);
       if (b.marsh < 0.3) continue;
       const h = terrain.heightAt(x, z);
@@ -603,12 +639,12 @@ export class Vegetation {
     this.padMaterial = mat;
   }
 
-  private placeMushrooms(
-    scene: THREE.Scene,
+  private *placeMushrooms(
+    scene: THREE.Object3D,
     terrain: Terrain,
     rng: Rng,
     elders: { x: number; z: number }[],
-  ): void {
+  ): Generator<void, void, void> {
     const mushrooms: Placement[] = [];
     const mushroomHosts: { x: number; z: number }[] = [...elders];
     for (let i = 0; i < 12 && i < this.autumnSpots.length; i++) {
@@ -643,18 +679,19 @@ export class Vegetation {
     }
   }
 
-  private placeDuneGrass(
-    scene: THREE.Scene,
+  private *placeDuneGrass(
+    scene: THREE.Object3D,
     terrain: Terrain,
     rng: Rng,
     R: number,
-  ): void {
+  ): Generator<void, void, void> {
     const DUNE_PALETTE = [0xb5c088, 0xa3b070, 0xc4cf9a];
     const dune: Placement[] = [];
     for (let i = 0; i < 4000 && dune.length < 28; i++) {
-      const x = rng.range(-R, R);
-      const z = rng.range(-R, R);
-      if (Math.sqrt(x * x + z * z) < R * 0.55) continue;
+      if ((i & 511) === 0) yield;
+      const x = this.cx + rng.range(-R, R);
+      const z = this.cz + rng.range(-R, R);
+      if (terrain.distanceTo(x, z) < R * 0.55) continue;
       const h = terrain.heightAt(x, z);
       if (h < 0.55 || h > 1.15 || terrain.slopeAt(x, z) > 0.35) continue;
       dune.push({

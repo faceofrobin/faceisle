@@ -20,7 +20,7 @@ export class Butterflies {
   private matIndex: number[] = [];
   private terrain: Terrain;
 
-  constructor(scene: THREE.Scene, terrain: Terrain, flowerSpots: THREE.Vector3[], rng: Rng) {
+  constructor(scene: THREE.Object3D, terrain: Terrain, flowerSpots: THREE.Vector3[], rng: Rng) {
     this.terrain = terrain;
     const wingColors = [0xff9c3f, 0xfff4e0, 0x8fb0ff, 0xffd75e];
     for (const c of wingColors) this.mats.push(frameMaterials(makeButterflyTextures(c)));
