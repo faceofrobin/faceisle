@@ -224,6 +224,7 @@ async function main(): Promise<void> {
       controls.setLookSensitivity(v.lookSensitivity);
       controls.setInvertY(v.invertY);
       day.setDayLength(v.dayLength);
+      weather.setAlwaysRain(v.alwaysRain);
     },
     onOpenChange: (open) => {
       controls.setEnabled(!open);

@@ -255,10 +255,10 @@ export class Rain {
     iPos.needsUpdate = true;
     iLife.needsUpdate = true;
 
-    // Pale cool streaks against the darkened sky; tint follows the day a little.
+    // Soft pale dashes — light enough on the storm slate, not icy white.
     const streakCol = this.streakMat.uniforms.uColor.value as THREE.Color;
-    streakCol.setRGB(0.68, 0.74, 0.86).lerp(day.horizon, 0.25);
-    streakCol.multiplyScalar(0.85 + day.daylight * 0.2);
+    streakCol.setRGB(0.78, 0.84, 0.9).lerp(day.horizon, 0.3);
+    streakCol.multiplyScalar(0.88 + day.daylight * 0.14);
 
     const hitCol = this.impactMat.uniforms.uColor.value as THREE.Color;
     hitCol.copy(day.light).multiplyScalar(1.35).lerp(this.hitTint, 0.45);

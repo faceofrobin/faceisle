@@ -17,6 +17,8 @@ export interface SettingsValues {
   invertY: boolean;
   /** Full day/night cycle length in seconds. */
   dayLength: number;
+  /** When true, weather stays rainy for this visit. */
+  alwaysRain: boolean;
 }
 
 export const DEFAULT_SETTINGS: SettingsValues = {
@@ -27,6 +29,7 @@ export const DEFAULT_SETTINGS: SettingsValues = {
   lookSensitivity: 1,
   invertY: false,
   dayLength: DEFAULT_DAY_LENGTH,
+  alwaysRain: false,
 };
 
 export interface SettingsOptions {
@@ -240,7 +243,7 @@ const MARKUP = `
       >
         <h3 class="set-h" id="set-h-gameplay">Gameplay</h3>
         <p class="set-note">
-          How quickly day turns to night. Changes apply straight away, for this visit only.
+          Changes apply straight away, for this visit only.
         </p>
         ${sliderField(
           "set-day",
@@ -250,6 +253,11 @@ const MARKUP = `
           formatDayMinutes(DEFAULT_DAY_LENGTH / 60),
           DAY_RANGE,
         )}
+        <label class="set-check" for="set-always-rain">
+          <input type="checkbox" id="set-always-rain">
+          <span class="set-box" aria-hidden="true"></span>
+          <span class="set-check-text">Always rain</span>
+        </label>
       </section>
     </div>
   </div>
@@ -437,6 +445,10 @@ export class SettingsMenu {
       this.values.invertY = on;
     });
 
+    this.check("set-always-rain", (on) => {
+      this.values.alwaysRain = on;
+    });
+
     for (const btn of this.panel.querySelectorAll<HTMLButtonElement>(".set-step")) {
       btn.addEventListener("click", () => {
         const input = this.input(btn.dataset.for ?? "");
@@ -586,6 +598,7 @@ export class SettingsMenu {
 
     this.input("set-muted").checked = this.values.muted;
     this.input("set-invert-y").checked = this.values.invertY;
+    this.input("set-always-rain").checked = this.values.alwaysRain;
   }
 
   private commit(): void {
