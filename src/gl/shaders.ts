@@ -99,24 +99,32 @@ ${SNAP_FRAGMENT}
 }
 `;
 
-// Billboards the same way three's sprite shader does: take the object origin
-// straight out of the model-view matrix and offset in view space, so the quad
-// always faces the camera without any per-sprite CPU work.
+// Cylindrical (Y-axis) billboard: face the camera in XZ, keep world up.
+// Full view-space billboarding (three's default) counter-rotates with camera
+// roll, so clouds and fauna spin when the flyer banks — wrong for a world
+// that should stay put while the eye leans.
 const SPRITE_VERTEX = `
 attribute vec3 position;
 attribute vec2 uv;
 uniform mat4 modelMatrix;
-uniform mat4 modelViewMatrix;
+uniform mat4 viewMatrix;
 uniform mat4 projectionMatrix;
+uniform vec3 cameraPosition;
 varying vec2 vUv;
 #ifdef USE_FOG
 varying float vFogDepth;
 #endif
 void main() {
   vUv = uv;
-  vec4 mvPosition = modelViewMatrix[3];
+  vec3 origin = modelMatrix[3].xyz;
   vec2 scale = vec2(length(modelMatrix[0].xyz), length(modelMatrix[1].xyz));
-  mvPosition.xy += position.xy * scale;
+  vec3 toCam = cameraPosition - origin;
+  vec3 horiz = vec3(toCam.x, 0.0, toCam.z);
+  float hl = length(horiz);
+  vec3 fwd = hl > 1e-4 ? horiz / hl : vec3(0.0, 0.0, 1.0);
+  vec3 right = vec3(fwd.z, 0.0, -fwd.x);
+  vec3 world = origin + right * (position.x * scale.x) + vec3(0.0, position.y * scale.y, 0.0);
+  vec4 mvPosition = viewMatrix * vec4(world, 1.0);
   #ifdef USE_FOG
     vFogDepth = -mvPosition.z;
   #endif

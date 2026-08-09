@@ -16,6 +16,7 @@ type HeightAt = (x: number, z: number) => number;
 const STREAK_VERT = `
 attribute float aLen;
 varying float vFade;
+varying vec2 vScreenUp;
 void main() {
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
   float dist = max(2.0, -mv.z);
@@ -24,6 +25,11 @@ void main() {
   gl_PointSize = clamp(aLen * 280.0 / dist, 6.0, 20.0);
   gl_Position = projectionMatrix * mv;
   vFade = clamp(1.2 - dist / 55.0, 0.15, 1.0);
+  // World-up in view space, flipped into gl_PointCoord (y grows downward).
+  vec3 viewUp = mat3(viewMatrix) * vec3(0.0, 1.0, 0.0);
+  vScreenUp = length(viewUp.xy) > 1e-4
+    ? normalize(vec2(viewUp.x, -viewUp.y))
+    : vec2(0.0, -1.0);
 }
 `;
 
@@ -31,12 +37,16 @@ const STREAK_FRAG = `
 uniform vec3 uColor;
 uniform float uAlpha;
 varying float vFade;
+varying vec2 vScreenUp;
 ${SNAP_GLSL}
 void main() {
   vec2 c = gl_PointCoord - 0.5;
-  // Vertical strip: thick centre, hard edges.
-  if (abs(c.x) > 0.16 || abs(c.y) > 0.48) discard;
-  float tip = 1.0 - abs(c.y) * 0.55;
+  // Align the strip with world vertical so banking tilts the rain with the horizon.
+  vec2 up = vScreenUp;
+  vec2 right = vec2(-up.y, up.x);
+  vec2 local = vec2(dot(c, right), dot(c, up));
+  if (abs(local.x) > 0.16 || abs(local.y) > 0.48) discard;
+  float tip = 1.0 - abs(local.y) * 0.55;
   float a = uAlpha * vFade * tip;
   if (a < 0.02) discard;
   gl_FragColor = vec4(snapFlat(uColor), a);
@@ -47,12 +57,17 @@ const IMPACT_VERT = `
 attribute float aSize;
 attribute float aLife;
 varying float vLife;
+varying vec2 vScreenUp;
 void main() {
   vLife = aLife;
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
   float dist = max(1.5, -mv.z);
   gl_PointSize = clamp(aSize * 220.0 / dist, 3.5, 14.0);
   gl_Position = projectionMatrix * mv;
+  vec3 viewUp = mat3(viewMatrix) * vec3(0.0, 1.0, 0.0);
+  vScreenUp = length(viewUp.xy) > 1e-4
+    ? normalize(vec2(viewUp.x, -viewUp.y))
+    : vec2(0.0, -1.0);
 }
 `;
 
@@ -60,11 +75,15 @@ const IMPACT_FRAG = `
 uniform vec3 uColor;
 uniform float uAlpha;
 varying float vLife;
+varying vec2 vScreenUp;
 ${SNAP_GLSL}
 void main() {
   vec2 c = gl_PointCoord - 0.5;
-  // Short horizontal fleck — a hit mark, not a glow.
-  if (abs(c.y) > 0.16 || abs(c.x) > 0.46) discard;
+  // Fleck stays world-horizontal (perpendicular to world-up on screen).
+  vec2 up = vScreenUp;
+  vec2 right = vec2(-up.y, up.x);
+  vec2 local = vec2(dot(c, right), dot(c, up));
+  if (abs(local.y) > 0.16 || abs(local.x) > 0.46) discard;
   float a = uAlpha * vLife;
   if (a < 0.03) discard;
   gl_FragColor = vec4(snapFlat(uColor), a);

@@ -5,9 +5,10 @@
  *
  * The API mirrors the slice of three.js the game previously used, so world and
  * gameplay code reads the same. Behaviour that affects the look is reproduced
- * deliberately rather than approximated: sprite billboarding, point-size
- * attenuation relative to canvas height, fog as a smoothstep between near and
- * far, and three's opaque/transparent sort order.
+ * deliberately rather than approximated: cylindrical sprite billboarding
+ * (world-up, yaw toward camera), point-size attenuation relative to canvas
+ * height, fog as a smoothstep between near and far, and three's
+ * opaque/transparent sort order.
  */
 
 export { ColorManagement, Color, Euler, MathUtils, Matrix4, Vector2, Vector3 } from "./math";
