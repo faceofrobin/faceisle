@@ -55,7 +55,7 @@ Static hosting: upload `dist/` (relative `base`, works in itch embeds). Vercel r
 
 Let go of <kbd>Space</kbd> to glide. Come down on land and you walk again; come down on water and you skim it and beat away. Diving trades height for speed, so a long crossing is a climb and then a long quiet fall.
 
-Touch devices get an on-screen stick and a **Fly** button; drag elsewhere to look.
+Touch devices get **Walk** and **Fly** on the left, a stick for moving, and **Settings** up top; drag elsewhere to look.
 
 Shareable islands use query params, e.g. `?seed=A7C3E911&t=0.26&weather=clear&goto=marsh`.
 

@@ -206,6 +206,8 @@
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   padding: 1.35rem clamp(1.2rem, 3vw, 1.85rem) 1.25rem;
 }
 
@@ -601,6 +603,8 @@ html.legal-reading #settings {
     padding: 0;
     place-items: stretch;
     overflow: hidden;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
   }
 
   .set-scrim {

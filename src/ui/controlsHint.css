@@ -76,10 +76,10 @@ html.legal-reading #controls-hint {
   transition: none;
 }
 
-/* Keep clear of the Fly button on the right. */
+/* Sit above the left Walk/Fly stack and clear the Settings chip. */
 body.touch-mode #controls-hint {
-  bottom: max(1.35rem, calc(env(safe-area-inset-bottom) + 0.35rem));
-  max-width: min(28rem, calc(100vw - 7.5rem));
+  bottom: max(11.5rem, calc(env(safe-area-inset-bottom) + 10.5rem));
+  max-width: min(28rem, calc(100vw - 2rem));
   padding-left: 0.95rem;
   padding-right: 0.95rem;
   font-size: 0.9rem;

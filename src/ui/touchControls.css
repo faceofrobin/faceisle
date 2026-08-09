@@ -1,4 +1,4 @@
-/* Twin-thumb HUD (Sylvaria-style): floating joyzone left, quiet pause top-right. */
+/* Twin-thumb HUD: Walk/Fly + stick on the left, Settings top-right. */
 
 #touch-ui {
   position: fixed;
@@ -17,7 +17,7 @@
   user-select: none;
 }
 
-.touch-pause {
+.touch-settings {
   pointer-events: auto;
   position: absolute;
   top: max(0.75rem, env(safe-area-inset-top));
@@ -41,22 +41,31 @@
 }
 
 /* Title screen already has Settings in the footer. */
-body:not(.playing) .touch-pause {
+body:not(.playing) .touch-settings {
   display: none;
 }
 
-.touch-pause:focus-visible {
+.touch-settings:focus-visible {
   outline: 2px solid #ffffff;
   outline-offset: 2px;
 }
 
-/* Held to fly, opposite the stick so both thumbs have somewhere to be. */
-.touch-fly {
-  pointer-events: auto;
+/* Mode stack: Walk above, Fly under the thumb at the bottom-left. */
+.touch-modes {
+  pointer-events: none;
   position: absolute;
-  right: max(1.1rem, env(safe-area-inset-right));
-  bottom: max(1.6rem, calc(env(safe-area-inset-bottom) + 1rem));
-  z-index: 36;
+  left: max(0.85rem, env(safe-area-inset-left));
+  bottom: max(1.4rem, calc(env(safe-area-inset-bottom) + 0.85rem));
+  z-index: 37;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: stretch;
+  gap: 0.65rem;
+}
+
+.touch-fly,
+.touch-walk {
+  pointer-events: auto;
   width: 76px;
   height: 76px;
   border: 0;
@@ -72,16 +81,18 @@ body:not(.playing) .touch-pause {
   -webkit-tap-highlight-color: transparent;
 }
 
-.touch-fly.on {
+.touch-fly.on,
+.touch-walk.on {
   background: rgba(255, 244, 228, 0.28);
   transform: scale(0.94);
 }
 
-body:not(.playing) .touch-fly {
+body:not(.playing) .touch-modes {
   display: none;
 }
 
-.touch-fly:focus-visible {
+.touch-fly:focus-visible,
+.touch-walk:focus-visible {
   outline: 2px solid #ffffff;
   outline-offset: 2px;
 }
@@ -138,10 +149,13 @@ body.touch-mode canvas {
   touch-action: none;
 }
 
-/* Menus need their own touch behavior above the locked game surface. */
-body.settings-open,
-body.settings-open #settings {
+/* Menus need vertical pan; game surface stays locked above. */
+body.settings-open {
   touch-action: manipulation;
+}
+
+body.settings-open #settings {
+  touch-action: pan-y;
 }
 
 html.legal-reading,
@@ -159,5 +173,18 @@ html.legal-reading #touch-ui {
   .touch-joyzone {
     width: 52vw;
     height: 58vh;
+  }
+}
+
+@media (max-height: 26rem) and (orientation: landscape) {
+  .touch-fly,
+  .touch-walk {
+    width: 64px;
+    height: 64px;
+    font-size: 0.9rem;
+  }
+
+  .touch-modes {
+    gap: 0.45rem;
   }
 }

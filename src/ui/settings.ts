@@ -326,17 +326,18 @@ export class SettingsMenu {
       return;
     }
     this.$("#set-hint").textContent =
-      "Tap Pause to open or close this menu.";
+      "Tap Settings to open or close this menu.";
     this.$("#set-keys").innerHTML = `
-      <li>Left side — drag to walk (stick appears under your thumb)</li>
-      <li>Drag elsewhere — look around</li>
+      <li>Walk — return to walking on land</li>
       <li>Fly — hold to take off, and to beat your wings</li>
-      <li>Pause — open or close this menu</li>`;
+      <li>Left side — drag to move (stick appears under your thumb)</li>
+      <li>Drag elsewhere — look around</li>
+      <li>Settings — open or close this menu</li>`;
     this.$("#set-wing").innerHTML = `
       <li>Fly — hold to climb, let go to glide down</li>
+      <li>Walk — touch down and walk again</li>
       <li>Drag to look; where you point is where you go</li>
-      <li>Stick — tuck, spread and bank</li>
-      <li>Come down on land to walk again</li>`;
+      <li>Stick — tuck, spread and bank</li>`;
   }
 
   get current(): SettingsValues {

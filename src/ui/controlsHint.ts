@@ -19,20 +19,20 @@ const DESKTOP_HTML = `
     </span>
     <span class="controls-hint-item">
       <kbd>Esc</kbd>
-      <span class="controls-hint-label">menu</span>
+      <span class="controls-hint-label">settings</span>
     </span>
   </div>`;
 
 const TOUCH_HTML = `
   <div class="controls-hint-row">
     <span class="controls-hint-item">
-      <span class="controls-hint-label">Left — walk</span>
+      <span class="controls-hint-label">Walk / Hold Fly</span>
     </span>
     <span class="controls-hint-item">
       <span class="controls-hint-label">Drag — look</span>
     </span>
     <span class="controls-hint-item">
-      <span class="controls-hint-label">Hold Fly — take off</span>
+      <span class="controls-hint-label">Settings</span>
     </span>
   </div>`;
 

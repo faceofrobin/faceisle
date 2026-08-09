@@ -11,6 +11,8 @@ export const DEFAULT_LOOK_SENSITIVITY = 0.0021;
 
 /** Seconds before a launch can be undone by touching the ground again. */
 const LAUNCH_GRACE = 0.45;
+/** Matches flight’s water line — below this there is no ground to walk on. */
+const LAND_LINE = 0.12;
 /** How long the change of shape takes, either way. */
 const MORPH_UP = 0.5;
 const MORPH_DOWN = 0.8;
@@ -164,6 +166,18 @@ export class Controls {
       this.pressFly();
     }
     this.touchFlap = on;
+  }
+
+  /**
+   * Touch Walk button: stop flapping and return to walking on land.
+   * Over water there is nowhere to stand, so this only clears the flap.
+   */
+  requestWalk(): void {
+    if (!this._enabled) return;
+    this.touchFlap = false;
+    this.beginPlay();
+    if (this.mode !== "raven") return;
+    if (this.groundHere > LAND_LINE) this.land();
   }
 
   /** Space, or the fly button: leave the ground if still on it. */

@@ -11,6 +11,8 @@ export class TouchControls {
   private zone: HTMLElement;
   private joy: HTMLElement;
   private knob: HTMLElement;
+  private flyBtn: HTMLElement;
+  private walkBtn: HTMLElement;
   private controls: Controls;
   private canvas: HTMLElement;
   private stickId: number | null = null;
@@ -20,16 +22,16 @@ export class TouchControls {
   private originY = 0;
   private lastLookX = 0;
   private lastLookY = 0;
-  private onPause: () => void;
+  private onSettings: () => void;
 
   constructor(
     controls: Controls,
     canvas: HTMLElement,
-    onPause: () => void,
+    onSettings: () => void,
   ) {
     this.controls = controls;
     this.canvas = canvas;
-    this.onPause = onPause;
+    this.onSettings = onSettings;
     controls.setTouchMode(true);
 
     this.root = document.createElement("div");
@@ -37,9 +39,13 @@ export class TouchControls {
     this.root.className = "hidden";
     this.root.setAttribute("aria-hidden", "true");
     this.root.innerHTML = `
-      <button type="button" class="touch-pause" id="btn-touch-pause">Pause</button>
-      <button type="button" class="touch-fly" id="btn-touch-fly"
-              aria-label="Fly">Fly</button>
+      <button type="button" class="touch-settings" id="btn-touch-settings">Settings</button>
+      <div class="touch-modes">
+        <button type="button" class="touch-fly" id="btn-touch-fly"
+                aria-label="Fly">Fly</button>
+        <button type="button" class="touch-walk" id="btn-touch-walk"
+                aria-label="Walk">Walk</button>
+      </div>
       <div class="touch-joyzone" aria-hidden="true">
         <div class="touch-joy"><div class="touch-joy-knob"></div></div>
       </div>`;
@@ -48,17 +54,20 @@ export class TouchControls {
     this.zone = this.root.querySelector(".touch-joyzone") as HTMLElement;
     this.joy = this.root.querySelector(".touch-joy") as HTMLElement;
     this.knob = this.root.querySelector(".touch-joy-knob") as HTMLElement;
+    this.flyBtn = this.root.querySelector("#btn-touch-fly") as HTMLElement;
+    this.walkBtn = this.root.querySelector("#btn-touch-walk") as HTMLElement;
 
-    const pauseBtn = this.root.querySelector(
-      "#btn-touch-pause",
+    const settingsBtn = this.root.querySelector(
+      "#btn-touch-settings",
     ) as HTMLButtonElement;
-    pauseBtn.addEventListener("click", (e) => {
+    settingsBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      this.onPause();
+      this.onSettings();
     });
 
-    this.bindFly(this.root.querySelector("#btn-touch-fly") as HTMLElement);
+    this.bindFly(this.flyBtn);
+    this.bindWalk(this.walkBtn);
     this.bindStick();
     this.bindLook();
   }
@@ -83,18 +92,45 @@ export class TouchControls {
     };
     const release = (e?: PointerEvent): void => {
       if (e && e.pointerId !== this.flyId) return;
-      this.flyId = null;
-      button.classList.remove("on");
-      this.controls.setFlap(false);
+      this.releaseFly();
     };
     button.addEventListener("pointerdown", press);
     button.addEventListener("pointerup", release);
     button.addEventListener("pointercancel", release);
     button.addEventListener("lostpointercapture", release);
-    window.addEventListener("blur", () => release());
+    window.addEventListener("blur", () => this.releaseFly());
     document.addEventListener("visibilitychange", () => {
-      if (document.hidden) release();
+      if (document.hidden) this.releaseFly();
     });
+  }
+
+  private releaseFly(): void {
+    this.flyId = null;
+    this.flyBtn.classList.remove("on");
+    this.controls.setFlap(false);
+  }
+
+  /** Tap to leave the air and walk again. */
+  private bindWalk(button: HTMLElement): void {
+    const press = (e: PointerEvent): void => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.releaseFly();
+      this.controls.requestWalk();
+      button.classList.add("on");
+      try {
+        button.setPointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
+    };
+    const release = (): void => {
+      button.classList.remove("on");
+    };
+    button.addEventListener("pointerdown", press);
+    button.addEventListener("pointerup", release);
+    button.addEventListener("pointercancel", release);
+    button.addEventListener("lostpointercapture", release);
   }
 
   show(): void {
@@ -106,6 +142,7 @@ export class TouchControls {
     this.root.classList.add("hidden");
     this.root.setAttribute("aria-hidden", "true");
     this.releaseStick();
+    this.releaseFly();
     this.lookId = null;
   }
 
@@ -190,7 +227,7 @@ export class TouchControls {
       if (this.lookId !== null || e.button !== 0) return;
       if (
         (e.target as HTMLElement).closest?.(
-          "#touch-ui, #btn-touch-fly, #footer-links, #settings, #legal",
+          "#touch-ui, #btn-touch-fly, #btn-touch-walk, #footer-links, #settings, #legal",
         )
       ) {
         return;
