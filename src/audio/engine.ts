@@ -1,7 +1,7 @@
 
 import { makeSpace } from './dsp';
 import { Drone } from './drone';
-import { NightChorus, Surf, Wind, makeBedNoise } from './beds';
+import { NightChorus, Rain, Surf, Wind, makeBedNoise } from './beds';
 import { Melody, TONIC, keyAt, midiToHz, type KeyState } from './theory';
 import { Send, bowed, place, struck } from './voices';
 import { Ground, bird, caw, cricket, footstep, frog, wingbeat } from './wildlife';
@@ -22,6 +22,8 @@ export interface WorldSound {
   elevation: number;
   gloom: number;
   windSpeed: number;
+  /** 0 dry … 1 steady rain. */
+  rain: number;
   moving: number;
   /** 0 on foot, 1 in the air — opens the world out and brings the air up. */
   flight: number;
@@ -46,6 +48,7 @@ export class AudioEngine {
   private drone!: Drone;
   private surf!: Surf;
   private wind!: Wind;
+  private rain!: Rain;
   private chorus!: NightChorus;
   private stepNoise!: AudioBuffer;
 
@@ -222,6 +225,7 @@ export class AudioEngine {
     const noise = makeBedNoise(ctx);
     this.surf = new Surf(ctx, this.bedDuck, noise.brown, noise.pink);
     this.wind = new Wind(ctx, this.bedDuck, noise.pink);
+    this.rain = new Rain(ctx, this.bedDuck, noise.pink);
     this.chorus = new NightChorus(ctx, this.bedDuck, noise.pink);
     this.stepNoise = noise.pink;
 
@@ -279,7 +283,11 @@ export class AudioEngine {
       this.drone.setBright(
         clamp01(this.key.bright * 0.6 + openness * 0.25 + height * 0.2 - w.gloom * 0.5),
       );
-      this.drone.setLevel(0.042 + stillness * 0.014 + this.key.bright * 0.012, 8);
+      // Rain takes the front seat — the meditation hum steps back so the patter reads.
+      this.drone.setLevel(
+        (0.042 + stillness * 0.014 + this.key.bright * 0.012) * (1 - w.rain * 0.72),
+        8,
+      );
     }
 
     this.hallPre.delayTime.setTargetAtTime(0.014 + openness * 0.052, t, 2);
@@ -303,6 +311,7 @@ export class AudioEngine {
       canopy,
       w.windSpeed + w.rush * w.flight * 7,
     );
+    this.rain.update(dt, w.rain, canopy, openness);
     this.chorus.update(night * night, 1 - w.gloom);
 
     if (this.lastPhase >= 0) {
@@ -378,9 +387,10 @@ export class AudioEngine {
 
     if (w.daylight > 0.35) {
       const chorusing = this.chorusT > 0 ? 3.2 : 1;
-      this.birdTimer -= dt * chorusing * (0.6 + w.daylight * 0.6 + canopy * 0.5);
+      this.birdTimer -=
+        dt * chorusing * (0.6 + w.daylight * 0.6 + canopy * 0.5) * (1 - w.rain * 0.85);
       if (this.birdTimer <= 0) {
-        this.birdTimer = 2.5 + Math.random() * 7;
+        this.birdTimer = 2.5 + Math.random() * 7 + w.rain * 8;
         const near = Math.pow(Math.random(), 1.8);
         const r = Math.random();
         bird(
@@ -398,9 +408,9 @@ export class AudioEngine {
     }
 
     if (w.daylight < 0.3) {
-      this.cricketTimer -= dt * (1 - w.daylight) * (1.4 - w.gloom);
+      this.cricketTimer -= dt * (1 - w.daylight) * (1.4 - w.gloom) * (1 - w.rain * 0.9);
       if (this.cricketTimer <= 0) {
-        this.cricketTimer = 0.7 + Math.random() * 1.4;
+        this.cricketTimer = 0.7 + Math.random() * 1.4 + w.rain * 4;
         cricket(ctx, this.sfxSend, {
           when: t + 0.02,
           peak: capPeak(0.018),

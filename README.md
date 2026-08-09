@@ -59,6 +59,15 @@ Touch devices get an on-screen stick and a **Fly** button; drag elsewhere to loo
 
 Shareable islands use query params, e.g. `?seed=A7C3E911&t=0.26&weather=clear&goto=marsh`.
 
+| Param | Effect |
+| ----- | ------ |
+| `seed` | Island seed (decimal or hex) |
+| `t` | Day phase `0…1` |
+| `weather` | Force `clear`, `cloudy`, or `rain` (stays that way) |
+| `goto` | `marsh`, `peak`, `cairn`, `pool`, `autumn`, or `x,z` |
+| `yaw` / `pitch` | Look angles |
+| `shot=1` | Marketing mode (hides chrome; exposes `window.__isle`) |
+
 ## License
 
 [MIT](LICENSE) © 2026 [kengocodes](https://github.com/kengocodes)

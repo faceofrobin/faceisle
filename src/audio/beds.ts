@@ -204,6 +204,93 @@ export class Wind {
   }
 }
 
+/**
+ * Steady rain: layered filtered noise — a soft body plus a brighter
+ * "patter" band that thickens as intensity rises.
+ */
+export class Rain {
+  private ctx: AudioContext;
+  private body: GainNode;
+  private patter: GainNode;
+  private bodyFilter: BiquadFilterNode;
+  private patterFilter: BiquadFilterNode;
+  private strength = 0;
+
+  constructor(ctx: AudioContext, dest: AudioNode, noise: AudioBuffer) {
+    this.ctx = ctx;
+
+    const src = ctx.createBufferSource();
+    src.buffer = noise;
+    src.loop = true;
+    src.start();
+
+    this.bodyFilter = ctx.createBiquadFilter();
+    this.bodyFilter.type = "lowpass";
+    this.bodyFilter.frequency.value = 900;
+    this.bodyFilter.Q.value = 0.45;
+
+    this.body = ctx.createGain();
+    this.body.gain.value = 0;
+    src.connect(this.bodyFilter);
+    this.bodyFilter.connect(this.body);
+    this.body.connect(dest);
+
+    this.patterFilter = ctx.createBiquadFilter();
+    this.patterFilter.type = "bandpass";
+    this.patterFilter.frequency.value = 2400;
+    this.patterFilter.Q.value = 0.7;
+
+    for (const [hz, depth] of [
+      [0.11, 280],
+      [0.047, 160],
+    ] as [number, number][]) {
+      const lfo = ctx.createOscillator();
+      lfo.frequency.value = hz;
+      const g = ctx.createGain();
+      g.gain.value = depth;
+      lfo.connect(g);
+      g.connect(this.patterFilter.frequency);
+      lfo.start();
+    }
+
+    this.patter = ctx.createGain();
+    this.patter.gain.value = 0;
+    src.connect(this.patterFilter);
+    this.patterFilter.connect(this.patter);
+    this.patter.connect(dest);
+  }
+
+  update(dt: number, rain: number, canopy: number, open: number): void {
+    const t = this.ctx.currentTime;
+    const want = Math.min(1, rain);
+    this.strength += (want - this.strength) * Math.min(1, dt * 0.55);
+
+    // Under trees the rain softens and the body drops; open ground or sea keeps it present.
+    const cover = 1 - canopy * 0.55;
+    const air = 0.65 + open * 0.35;
+    this.body.gain.setTargetAtTime(
+      this.strength * 0.055 * cover * air,
+      t,
+      1.2,
+    );
+    this.patter.gain.setTargetAtTime(
+      this.strength * (0.018 + open * 0.022) * cover,
+      t,
+      1.0,
+    );
+    this.bodyFilter.frequency.setTargetAtTime(
+      700 + this.strength * 500 + canopy * 200,
+      t,
+      1.6,
+    );
+    this.patterFilter.frequency.setTargetAtTime(
+      1800 + this.strength * 900 + open * 400,
+      t,
+      1.4,
+    );
+  }
+}
+
 export class NightChorus {
   private ctx: AudioContext;
   private out: GainNode;

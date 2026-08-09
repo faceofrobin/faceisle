@@ -5,6 +5,7 @@ import { Archipelago } from "./world/archipelago";
 import { Water } from "./world/water";
 import { Sky } from "./world/sky";
 import { Weather } from "./world/weather";
+import { Rain } from "./world/rain";
 import { findSpawn, applyGoto } from "./world/spawn";
 import { hazeTint } from "./world/palette";
 import { probeShore } from "./world/shore";
@@ -110,6 +111,7 @@ async function main(): Promise<void> {
   await yieldPaint();
   const sky = new Sky(scene, home.skyRng);
   const weather = new Weather(home.weatherRng, params.get("weather"));
+  const rain = new Rain(scene, (x, z) => world.heightAt(x, z));
 
 
   // The home island is built outright behind the loading bar, the way it
@@ -323,7 +325,8 @@ async function main(): Promise<void> {
   world.update(controls.position.x, controls.position.z);
   world.updateVisuals(0, 0, day, fog, controls.position, 0);
   sky.update(day, camera.position, 0, 0, weather);
-  water.update(0, day, fog, camera.position);
+  water.update(0, day, fog, camera.position, weather.rain);
+  rain.update(0, camera.position, day, weather);
   post.render(renderer, scene, camera, title.visible ? title.scene : null);
 
   await boot.finish();
@@ -441,7 +444,8 @@ async function main(): Promise<void> {
     fog.color.multiply(haze);
 
     sky.update(day, camera.position, time, dt, weather);
-    water.update(time, day, fog, camera.position);
+    water.update(time, day, fog, camera.position, weather.rain);
+    rain.update(dt, camera.position, day, weather);
     world.updateVisuals(dt, time, day, fog, pos, camera.rotation.y);
     raven.update(controls.morph, controls.flight.beatPhase, controls.flight.roll, day.tint);
 
@@ -458,6 +462,7 @@ async function main(): Promise<void> {
       elevation: controls.flying ? Math.max(elevation, controls.altitude * 0.3) : elevation,
       gloom: weather.gloom,
       windSpeed: weather.windSpeed,
+      rain: weather.rain,
       moving: controls.moving,
       flight: controls.morph,
       rush: THREE.MathUtils.clamp((controls.flight.airspeed - 18) / 30, 0, 1),

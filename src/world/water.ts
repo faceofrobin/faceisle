@@ -63,6 +63,7 @@ uniform sampler2D uHeight;
 uniform vec2 uHeightCenter;
 uniform float uInvExtent;
 uniform float uAerial;
+uniform float uRain;
 varying vec3 vWorld;
 varying float vFogDepth;
 ${SNAP_GLSL}
@@ -115,9 +116,10 @@ void main() {
   // aren't one of the flat tones.
   vec2 dp = vec2(p.x * 0.42, p.y * 0.22) + vec2(uTime * 0.05, 0.0);
   vec2 dloc = fract(dp);
-  float dash = step(0.94, hash(floor(dp)))
+  // Rain lifts the foam a little — denser dashes, still sparse and hard-edged.
+  float dash = step(0.94 - uRain * 0.06, hash(floor(dp)))
              * step(dloc.x, 0.5)
-             * step(abs(dloc.y - 0.5), 0.06);
+             * step(abs(dloc.y - 0.5), 0.06 + uRain * 0.02);
   // Foam is the day's own light, pushed up until it clips — white at noon,
   // cream at sunset, a dull blue-grey at midnight. Mixing toward pure white
   // instead would leave the sea glowing after dark.
@@ -181,6 +183,7 @@ export class Water {
         uHeightCenter: { value: new THREE.Vector2(x, z) },
         uInvExtent: { value: 1 / HEIGHT_EXTENT },
         uAerial: { value: 0 },
+        uRain: { value: 0 },
       },
     });
     const geo = new THREE.PlaneGeometry(PLANE_REACH * 2, PLANE_REACH * 2, 1, 1);
@@ -260,6 +263,7 @@ export class Water {
     day: DayCycle,
     fog: THREE.Fog,
     eye: THREE.Vector3,
+    rain = 0,
   ): void {
     // World-space shading, so sliding the quad under the camera is seamless.
     this.mesh.position.set(eye.x, 0, eye.z);
@@ -284,5 +288,6 @@ export class Water {
     (u.uFogColor.value as THREE.Color).copy(fog.color);
     u.uFogNear.value = fog.near;
     u.uFogFar.value = fog.far;
+    u.uRain.value = rain;
   }
 }
