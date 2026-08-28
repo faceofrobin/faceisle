@@ -172,11 +172,13 @@ Do not place README images in `src/` or `public/` unless the running game also n
 
 GitHub automatically tests and compiles Faceisle after every update to `main`.
 
-To download it:
+The easiest route is the permanent [Download the latest Faceisle deployment](https://github.com/faceofrobin/faceisle/releases/download/deployment-latest/faceisle-deployment.zip) link.
+
+GitHub also preserves each individual build:
 
 1. Open the repository's **Actions** tab.
 2. Open the newest successful **Build deployment ZIP** run.
-3. Find **Artifacts** at the bottom of the run.
+3. Tap the **Artifacts** count or find **Artifacts** at the bottom of the run.
 4. Download **faceisle-deployment**.
 5. Unzip it and upload the enclosed files to the desired folder on the web server.
 
