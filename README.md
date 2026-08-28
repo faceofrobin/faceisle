@@ -10,7 +10,7 @@ From high above, the geography reveals its older intention. Every island is The 
 
 The Face is not placed on top of the terrain as a logo or texture. It becomes the terrain itself. Its positive shapes form land, its negative spaces become lagoons, marshes, reefs, shadowed stone, and channels of water. Each island retains procedural variation while preserving the exact structure and geometry of The Face.
 
-Faceisle is currently being transformed from the original procedural island engine into this new world.
+Faceisle is being transformed from the original procedural island engine into this new world. The first Face-shaped terrain system is now active in the repository.
 
 ## The central idea
 
@@ -39,15 +39,24 @@ The existing engine already provides:
 - A small custom WebGL2 renderer with no runtime dependencies
 - Desktop and touch controls
 
-The next terrain system will replace the existing primarily circular island falloff with a mask derived from the exact artwork for The Face.
+The repository now includes:
 
-Until that terrain work lands, screenshots in this repository show the underlying island engine rather than the final Face-shaped geography.
+- The untouched authoritative SVG at `public/assets/the-face/the-face.svg`
+- A strict black-and-white derivative at `public/assets/the-face/terrain-mask.svg`
+- A compact 128 × 128 signed-distance field with quarter-pixel precision
+- Fast bilinear sampling in normalized island coordinates
+- Face-shaped terrain enabled for every streamed island
+- Higher-resolution distant meshes to preserve the aerial silhouette
+- Mask-aware landmark placement that avoids eyes and other internal waterways
+- Automated checks for the border ring, face, pupils, background, and sampler continuity
+
+The existing screenshots still show the underlying island engine and predate the Face-shaped geography. New aerial and ground-level captures will replace them as the visual treatment is tuned.
 
 ## How The Face becomes an island
 
 The Face artwork remains the authoritative source. It must not be redrawn, approximated, or procedurally reinterpreted.
 
-The intended terrain pipeline is:
+The implemented terrain pipeline is:
 
 1. Preserve the exact Face artwork as a clean SVG or lossless black-and-white source image.
 2. Convert that source into a compact signed-distance field for fast terrain sampling.
