@@ -168,6 +168,22 @@ Do not place README images in `src/` or `public/` unless the running game also n
 - Generative Web Audio
 - No runtime dependencies
 
+## Downloading a ready-to-upload site
+
+GitHub automatically tests and compiles Faceisle after every update to `main`.
+
+To download it:
+
+1. Open the repository's **Actions** tab.
+2. Open the newest successful **Build deployment ZIP** run.
+3. Find **Artifacts** at the bottom of the run.
+4. Download **faceisle-deployment**.
+5. Unzip it and upload the enclosed files to the desired folder on the web server.
+
+The downloaded artifact is already compiled. It does not require Node.js, npm, Vite, or any command-line work on the destination server.
+
+Upload the files inside the ZIP so that its `index.html` sits directly in the public web folder. Do not upload the repository source in its place: source `.ts` files are TypeScript ingredients, while the deployment artifact contains the finished JavaScript meal.
+
 ## Local setup
 
 ```bash
