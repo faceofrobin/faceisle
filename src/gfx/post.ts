@@ -116,7 +116,7 @@ export class PixelatePass {
 
   /**
    * Overlays are drawn flat over the world, in order, before the downsample —
-   * so the title and the raven's wings land on the same pixel grid and the
+   * so the title and the wings land on the same pixel grid and the
    * same colour ladder as everything else.
    */
   render(

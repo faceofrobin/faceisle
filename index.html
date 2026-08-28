@@ -6,18 +6,15 @@
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
-    <title>isle</title>
+    <title>faceisle</title>
     <meta
       name="description"
-      content="A quiet procedural island to walk in the browser. Day fades into night, the wind moves through the trees, and nothing asks you to hurry."
+      content="An infinite archipelago shaped by The Face. Walk the islands, take wing, and climb until the geography reveals itself."
     />
-    <meta name="theme-color" content="#070d18" />
+    <meta name="theme-color" content="#050505" />
     <meta name="color-scheme" content="dark" />
 
-    <link
-      rel="icon"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%234fa8e8'/%3E%3Ccircle cx='11' cy='5' r='3' fill='%23ffe9b0'/%3E%3Cpath d='M0 11 L5 7 L9 11 L16 9 V16 H0 Z' fill='%2361a844'/%3E%3C/svg%3E"
-    />
+    <link rel="icon" type="image/svg+xml" href="./assets/the-face/the-face.svg" />
     <link
       rel="icon"
       type="image/png"
@@ -27,28 +24,27 @@
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
 
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://isle-gamma.vercel.app/" />
-    <meta property="og:site_name" content="isle" />
-    <meta property="og:title" content="isle" />
+    <meta property="og:site_name" content="faceisle" />
+    <meta property="og:title" content="faceisle" />
     <meta
       property="og:description"
-      content="A quiet procedural island to walk in the browser. Day fades into night, the wind moves through the trees, and nothing asks you to hurry."
+      content="An infinite archipelago shaped by The Face. Walk the islands, take wing, and climb until the geography reveals itself."
     />
-    <meta property="og:image" content="https://isle-gamma.vercel.app/og.jpg" />
+    <meta property="og:image" content="./og.jpg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta
       property="og:image:alt"
-      content="The isle title over a sunlit procedural island and calm water"
+      content="The Face above the monochrome faceisle title and its procedural archipelago"
     />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="isle" />
+    <meta name="twitter:title" content="faceisle" />
     <meta
       name="twitter:description"
-      content="A quiet procedural island to walk in the browser. Day fades into night, the wind moves through the trees, and nothing asks you to hurry."
+      content="An infinite archipelago shaped by The Face. Walk the islands, take wing, and climb until the geography reveals itself."
     />
-    <meta name="twitter:image" content="https://isle-gamma.vercel.app/og.jpg" />
+    <meta name="twitter:image" content="./og.jpg" />
 
     <style>
       /* iOS ignores user-scalable=no; touch-action: manipulation kills
@@ -110,19 +106,27 @@
         aria-hidden="true"
         focusable="false"
       >
-        <rect width="64" height="40" fill="#0c1628" rx="3" />
-        <circle cx="44" cy="12" r="5.5" fill="#ffe9b0" />
+        <rect width="64" height="40" fill="#050505" rx="3" />
+        <image
+          href="./assets/the-face/the-face.svg"
+          x="37"
+          y="5"
+          width="14"
+          height="14"
+          preserveAspectRatio="xMidYMid meet"
+        />
         <path
           d="M0 29 C10 22 18 24 28 20 C38 16 46 22 64 18 V40 H0 Z"
-          fill="#5fa84a"
+          fill="#a5a5a5"
         />
         <path
           d="M0 33 C14 30 24 34 36 31 C48 28 56 32 64 30 V40 H0 Z"
-          fill="#4fa8e8"
+          fill="#353535"
           opacity="0.85"
         />
       </svg>
-      <p class="boot-label" id="boot-label">Growing an island…</p>
+      <div class="boot-wordmark">faceisle</div>
+      <p class="boot-label" id="boot-label">Growing The Face…</p>
       <div class="boot-bar" aria-hidden="true">
         <div class="boot-bar-fill" id="boot-fill"></div>
       </div>
@@ -138,7 +142,7 @@
         ><span class="sep">·</span><a href="#terms">Terms</a
         ><span class="sep">·</span
         ><a
-          href="https://github.com/kengocodes/isle"
+          href="https://github.com/faceofrobin/faceisle"
           target="_blank"
           rel="noopener noreferrer"
           >GitHub</a

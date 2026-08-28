@@ -1,16 +1,16 @@
 #settings {
-  --set-bg: #0c1424;
-  --set-edge: #2b3a57;
-  --set-ink: #d8d0c0;
-  --set-ink-strong: #ebe3d2;
-  --set-muted: #8e9bb0;
-  --set-accent: #8ec9ef;
-  --set-accent-bright: #bde1fa;
-  --set-control: #16203a;
-  --set-control-edge: #3a4c6e;
-  --set-btn: #1c2942;
-  --set-deep: #08111f;
-  --set-rail: #0a1220;
+  --set-bg: #111111;
+  --set-edge: #4a4a4a;
+  --set-ink: #d2d2d2;
+  --set-ink-strong: #f4f4f4;
+  --set-muted: #9a9a9a;
+  --set-accent: #dedede;
+  --set-accent-bright: #ffffff;
+  --set-control: #1b1b1b;
+  --set-control-edge: #595959;
+  --set-btn: #272727;
+  --set-deep: #050505;
+  --set-rail: #090909;
 
   position: fixed;
   inset: 0;
@@ -36,7 +36,7 @@
 .set-scrim {
   position: fixed;
   inset: 0;
-  background: rgba(4, 8, 16, 0.66);
+  background: rgba(0, 0, 0, 0.72);
 }
 
 .set-panel {
@@ -52,7 +52,7 @@
   background: var(--set-bg);
   border: 2px solid var(--set-edge);
   border-radius: 0;
-  box-shadow: 4px 4px 0 rgba(2, 5, 12, 0.35);
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.48);
   color: var(--set-ink);
   font-size: 1rem;
   line-height: 1.55;
@@ -343,19 +343,19 @@
 }
 
 .set-btn:hover {
-  background: #24344f;
+  background: #353535;
   border-color: var(--set-accent);
 }
 
 .set-btn-armed {
   color: var(--set-deep);
-  background: #f0c98a;
-  border-color: #f0c98a;
+  background: #bdbdbd;
+  border-color: #bdbdbd;
 }
 
 .set-btn-armed:hover {
-  background: #f7dcae;
-  border-color: #f7dcae;
+  background: #dedede;
+  border-color: #dedede;
 }
 
 .set-btn-go {
@@ -394,7 +394,7 @@
 }
 
 .set-step:hover {
-  background: #24344f;
+  background: #353535;
   border-color: var(--set-accent);
 }
 

@@ -17,7 +17,7 @@ import {
 import { AudioEngine } from "./audio/engine";
 import type { Ground } from "./audio/wildlife";
 import { PixelatePass } from "./gfx/post";
-import { RavenView } from "./gfx/raven";
+import { FlightView } from "./gfx/flightView";
 import { TitleScreen } from "./gfx/title";
 import { initLegalOverlay, isLegalOpen } from "./legal/overlay";
 import { BootScreen, yieldPaint } from "./ui/boot";
@@ -165,7 +165,7 @@ async function main(): Promise<void> {
   if (pitchParam !== null) controls.setPitch(Number(pitchParam));
   let touchMode = prefersTouchControls();
   const title = new TitleScreen();
-  const raven = new RavenView();
+  const flightView = new FlightView();
   initLegalOverlay((on) => audio.setSilent(on));
 
   let touchUi: TouchControls | null = null;
@@ -293,7 +293,7 @@ async function main(): Promise<void> {
     camera.updateProjectionMatrix();
     post.setSize(w, h);
     title.setSize(w, h);
-    raven.setSize(w, h);
+    flightView.setSize(w, h);
   }
   window.addEventListener("resize", fitViewport);
   window.addEventListener("orientationchange", () => {
@@ -346,7 +346,7 @@ async function main(): Promise<void> {
         camera.updateProjectionMatrix();
         post.setSize(w, h);
         title.setSize(w, h);
-        raven.setSize(w, h);
+        flightView.setSize(w, h);
       },
       setLook(yaw: number, pitch = 0) {
         controls.setYaw(yaw);
@@ -361,7 +361,7 @@ async function main(): Promise<void> {
       fly(on: boolean) {
         controls.setFlap(on);
       },
-      /** Put the raven at an absolute height, for aerial framing. */
+      /** Put the flight form at an absolute height, for aerial framing. */
       aloft(x: number, y: number, z: number, yaw?: number, pitch?: number) {
         controls.setFlap(true);
         controls.position.set(x, y, z);
@@ -448,7 +448,12 @@ async function main(): Promise<void> {
     water.update(time, day, fog, camera.position, weather.rain);
     rain.update(dt, camera.position, day, weather);
     world.updateVisuals(dt, time, day, fog, pos, camera.rotation.y);
-    raven.update(controls.morph, controls.flight.beatPhase, controls.flight.roll, day.tint);
+    flightView.update(
+      controls.morph,
+      controls.flight.beatPhase,
+      controls.flight.roll,
+      day.tint,
+    );
 
     const island = world.nearest(pos.x, pos.z);
     const veg = island.vegetation;
@@ -473,7 +478,7 @@ async function main(): Promise<void> {
       renderer,
       scene,
       camera,
-      raven.scene.visible ? raven.scene : null,
+      flightView.scene.visible ? flightView.scene : null,
       title.visible ? title.scene : null,
     );
   });

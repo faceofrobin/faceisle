@@ -218,7 +218,7 @@ const MARKUP = `
         <ul class="set-keys" id="set-keys" aria-labelledby="set-h-keys">
           <li><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> or arrows — walk</li>
           <li><kbd>Shift</kbd> — stroll</li>
-          <li><kbd>Space</kbd> — take to the air as a raven</li>
+          <li><kbd>Space</kbd> — take wing</li>
           <li>Click — look around</li>
           <li><kbd>Esc</kbd> — open or close this menu</li>
         </ul>
@@ -314,7 +314,7 @@ export class SettingsMenu {
       this.$("#set-keys").innerHTML = `
           <li><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> or arrows — walk</li>
           <li><kbd>Shift</kbd> — stroll</li>
-          <li><kbd>Space</kbd> — take to the air as a raven</li>
+          <li><kbd>Space</kbd> — take wing</li>
           <li>Click — look around</li>
           <li><kbd>Esc</kbd> — open or close this menu</li>`;
       this.$("#set-wing").innerHTML = `

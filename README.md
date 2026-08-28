@@ -4,7 +4,7 @@
 
 Faceisle is a quiet browser world of grass, trees, stone, weather, water, and flight. At ground level, each island feels like a small natural place: woods move in the wind, shorelines fold into the sea, creatures wander, and day slowly becomes night.
 
-Take the form of a raven and climb.
+Take wing and climb.
 
 From high above, the geography reveals its older intention. Every island is The Face.
 
@@ -28,7 +28,7 @@ The existing engine already provides:
 
 - An infinite, deterministic archipelago generated from a world seed
 - Walkable procedural terrain
-- Raven flight and island-to-island travel
+- Flight and island-to-island travel
 - Streaming near, far, and unloaded island states
 - Trees, grass, flowers, reeds, mushrooms, and biome variation
 - Beaches, marshes, pools, mountains, snow, stone, and landmarks
@@ -106,13 +106,13 @@ A seed must not change:
 
 ## The aerial revelation
 
-The current flight system allows the player to become a raven and climb above the islands. Faceisle will tune the flight ceiling, distant terrain resolution, haze, and camera behavior so the full landform can be discovered naturally.
+The current flight system allows the player to take wing and climb above the islands. Faceisle will tune the distant terrain resolution, haze, and camera behavior so the full landform can be discovered naturally.
 
 The ideal sequence is simple:
 
 - Walk through an apparently organic island.
 - Notice unusual waterways and ridges.
-- Become the raven.
+- Take wing.
 - Climb until the paths and coast begin to align.
 - See The Face looking back from the sea.
 
@@ -212,7 +212,7 @@ The production build is written to `dist/` and can be deployed as a static site.
 | Click or tap | Start and unlock audio | — |
 | Mouse | Look | Steer |
 | WASD or arrows | Walk | Tuck, spread, and bank |
-| Space | Become the raven | Beat wings and climb |
+| Space | Take wing | Beat wings and climb |
 | Shift | Stroll | Fold wings and dive |
 | Esc | Settings | Settings |
 

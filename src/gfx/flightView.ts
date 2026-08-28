@@ -1,22 +1,20 @@
 import * as THREE from "../gl";
 import { PixelSprite } from "./sprites/painter";
-import { WING_FRAMES, makeWingTextures } from "./sprites/wing";
+import { WING_FRAMES, makeWingTextures } from "./sprites/wings";
 import { TARGET_ROWS } from "./post";
 
 /** Share of the frame's height one wing takes. */
 const SCREEN_SHARE = 0.5;
 
 /**
- * The raven, seen from inside it.
+ * The flight form, seen from inside it.
  *
- * There is no bird model, because the game is first person and never leaves
- * it. What sells the change of shape is what a bird would actually have at the
- * edge of its vision: the inner wing sweeping up past the shoulder and back
- * down, one on each side, leaning with the roll. The left wing is the right
- * one with a negative width — which reverses its winding, so the material has
- * to be double-sided or it culls away entirely.
+ * There is no animal model. Flight arrives as two abstract monochrome wings at
+ * the edge of vision, leaning with the roll and sweeping through the stroke.
+ * The left form is the right one with a negative width, so the material must
+ * remain double-sided.
  */
-export class RavenView {
+export class FlightView {
   readonly scene = new THREE.Scene();
 
   private left: THREE.Mesh;

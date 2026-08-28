@@ -1,17 +1,16 @@
 {
-  "name": "isle",
+  "name": "faceisle",
   "private": true,
   "version": "1.0.0",
-  "description": "A quiet procedural island to walk in the browser",
+  "description": "An infinite procedural archipelago shaped by The Face",
   "license": "MIT",
-  "author": "kengocodes",
-  "homepage": "https://kengocodes.itch.io/isle",
+  "author": "faceofrobin, based on isle by kengocodes",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kengocodes/isle.git"
+    "url": "git+https://github.com/faceofrobin/faceisle.git"
   },
   "bugs": {
-    "url": "https://github.com/kengocodes/isle/issues"
+    "url": "https://github.com/faceofrobin/faceisle/issues"
   },
   "type": "module",
   "scripts": {
