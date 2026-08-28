@@ -87,6 +87,7 @@ export class Island {
       relief: site.relief,
       snowline: site.snowline,
       landmark: site.landmark,
+      landform: "face",
     });
     this.skyRng = rng.fork();
     this.vegSeed = forkSeed(rng);
