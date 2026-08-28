@@ -2,6 +2,7 @@ import * as THREE from "../gl";
 import { Noise2D } from "../util/noise";
 import { Rng } from "../util/random";
 import { snapMaterial } from "../gfx/post";
+import { sampleFaceDistance } from "./faceTerrainMask";
 import { GROUND, RegionSample, posterize, washGround } from "./palette";
 
 /** The island the game shipped with: 300 m of land, a 680 m plane, 2.1 m quads. */
@@ -9,6 +10,7 @@ const HOME_RADIUS = 300;
 const PLANE_OVERSHOOT = 680 / HOME_RADIUS;
 const FULL_QUAD = 2.125;
 const FAR_QUAD = 9;
+const FACE_FAR_QUAD = 5;
 
 /** Sea floor beyond the island's reach, and what open ocean reads as. */
 export const DEEP_SEA = -3.2;
@@ -47,6 +49,8 @@ export interface IslandShape {
   relief?: number;
   snowline?: number;
   landmark?: Landmark;
+  /** Geographic envelope. Radial remains available for legacy terrain tests. */
+  landform?: "radial" | "face";
 }
 
 const AUTUMN_ANG = 1.95;
@@ -82,6 +86,7 @@ export class Terrain {
   private peakZ: number;
   private relief: number;
   private landmark: Landmark;
+  private landform: "radial" | "face";
   /** Island size relative to the home island, for distances tuned against it. */
   private k: number;
   private planeSize: number;
@@ -105,12 +110,14 @@ export class Terrain {
     this.relief = shape.relief ?? 1;
     this.snowline = shape.snowline ?? 17.5;
     this.landmark = shape.landmark ?? "peak";
+    this.landform = shape.landform ?? "radial";
     this.k = this.islandRadius / HOME_RADIUS;
     this.planeSize = this.islandRadius * PLANE_OVERSHOOT;
 
     const pr = this.islandRadius * 0.22;
-    this.peakX = Math.cos(this.baseAngle + PEAK_ANG) * pr;
-    this.peakZ = Math.sin(this.baseAngle + PEAK_ANG) * pr;
+    const peak = this.pickPeakSite(pr);
+    this.peakX = peak.x;
+    this.peakZ = peak.z;
     const peakWorldX = this.peakX + this.centerX;
     const peakWorldZ = this.peakZ + this.centerZ;
     this.peakSite = new THREE.Vector3(
@@ -133,7 +140,8 @@ export class Terrain {
 
   /** Vertices per side for a silhouette seen from the air. */
   get farSegments(): number {
-    return Math.max(16, Math.round(this.planeSize / FAR_QUAD));
+    const quad = this.landform === "face" ? FACE_FAR_QUAD : FAR_QUAD;
+    return Math.max(16, Math.round(this.planeSize / quad));
   }
 
   /** Distance from this island's centre, in metres. */
@@ -174,12 +182,17 @@ export class Terrain {
     const dpz = lz - this.peakZ;
     const peak = this.landmarkRise(dpx * dpx + dpz * dpz);
 
-    const warp =
-      this.maskNoise.fbm(lx * 0.008 + 71.3, lz * 0.008 + 29.9, 3) * 0.22;
-    const r = dist / this.islandRadius + warp;
-    const falloff = 1 - THREE.MathUtils.smoothstep(r, 0.42, 1.02);
-    let h =
-      ((damped + peak) * this.relief + 5.5) * falloff * falloff + DEEP_SEA;
+    let envelope: number;
+    if (this.landform === "face") {
+      envelope = this.faceFalloff(lx, lz);
+    } else {
+      const warp =
+        this.maskNoise.fbm(lx * 0.008 + 71.3, lz * 0.008 + 29.9, 3) * 0.22;
+      const r = dist / this.islandRadius + warp;
+      const falloff = 1 - THREE.MathUtils.smoothstep(r, 0.42, 1.02);
+      envelope = falloff * falloff;
+    }
+    let h = ((damped + peak) * this.relief + 5.5) * envelope + DEEP_SEA;
 
     if (marsh > 0.001) {
       h = THREE.MathUtils.lerp(h, 0.9, 0.45 * marsh);
@@ -193,6 +206,50 @@ export class Terrain {
       }
     }
     return h;
+  }
+
+  /**
+   * A narrow natural shore around the exact vector boundary. Noise moves the
+   * waterline by less than two metres on the home island: enough to break a
+   * mathematically perfect edge, not enough to redraw The Face.
+   */
+  private faceFalloff(lx: number, lz: number): number {
+    const signed =
+      sampleFaceDistance(lx / this.islandRadius, lz / this.islandRadius) *
+      this.islandRadius;
+    const shoreWobble =
+      this.maskNoise.fbm(lx * 0.028 + 19.4, lz * 0.028 - 37.1, 2) *
+      Math.min(1.8, this.islandRadius * 0.006);
+    const feather = Math.max(1.4, 2.4 * this.k);
+    return THREE.MathUtils.smoothstep(signed + shoreWobble, -feather, feather);
+  }
+
+  /**
+   * Landmarks choose among deterministic candidates that lie well inside The
+   * Face. This prevents a peak, caldera or elder tree from standing in an eye.
+   */
+  private pickPeakSite(radius: number): { x: number; z: number } {
+    const first = this.baseAngle + PEAK_ANG;
+    if (this.landform !== "face") {
+      return { x: Math.cos(first) * radius, z: Math.sin(first) * radius };
+    }
+
+    let bestX = 0;
+    let bestZ = 0;
+    let best = sampleFaceDistance(0, 0);
+    const golden = Math.PI * (3 - Math.sqrt(5));
+    for (let i = 0; i < 32; i++) {
+      const r = this.islandRadius * (0.1 + (i % 5) * 0.065);
+      const a = first + i * golden;
+      const x = Math.cos(a) * r;
+      const z = Math.sin(a) * r;
+      const score = sampleFaceDistance(x / this.islandRadius, z / this.islandRadius);
+      if (score <= best) continue;
+      best = score;
+      bestX = x;
+      bestZ = z;
+    }
+    return { x: bestX, z: bestZ };
   }
 
   /**
