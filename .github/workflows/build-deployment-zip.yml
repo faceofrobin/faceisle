@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: faceisle-deployment
@@ -37,10 +37,35 @@ jobs:
       - name: Compile production site
         run: npm run build
 
-      - name: Package ready-to-upload site
+      - name: Create deployment ZIP
+        run: |
+          cd dist
+          zip -r ../faceisle-deployment.zip .
+
+      - name: Preserve build as an Actions artifact
         uses: actions/upload-artifact@v4
         with:
           name: faceisle-deployment
           path: dist/
           if-no-files-found: error
           retention-days: 90
+
+      - name: Publish the permanent latest-download link
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view deployment-latest >/dev/null 2>&1; then
+            gh api --method PATCH "repos/${GITHUB_REPOSITORY}/git/refs/tags/deployment-latest" \
+              -f sha="${GITHUB_SHA}" -F force=true
+            gh release upload deployment-latest faceisle-deployment.zip --clobber
+            gh release edit deployment-latest \
+              --title "Latest Faceisle deployment" \
+              --notes "Automatically compiled from the latest main branch. Unzip and upload the enclosed files to the public web folder." \
+              --prerelease
+          else
+            gh release create deployment-latest faceisle-deployment.zip \
+              --target "${GITHUB_SHA}" \
+              --title "Latest Faceisle deployment" \
+              --notes "Automatically compiled from the latest main branch. Unzip and upload the enclosed files to the public web folder." \
+              --prerelease
+          fi
