@@ -37,17 +37,18 @@ function firstPaintCss(source: string = html): string {
 function expectBootChrome(css: string): void {
   expect(css).toMatch(/\.hidden\s*\{[^}]*display:\s*none/s);
   expect(css).toMatch(/#boot\s*\{[^}]*position:\s*fixed/s);
+  expect(css).toMatch(/#boot\s*\{[^}]*background:\s*#050505/s);
   expect(css).toMatch(/#boot-label|#boot\s+\.boot-label|\.boot-label/s);
   expect(css).toMatch(/\.boot-bar-fill\s*\{/s);
   expect(css).toMatch(/body:not\(\.ready\)\s+#prompt/s);
   expect(css).toMatch(/#prompt\s*\{[^}]*position:\s*fixed/s);
-  expect(css).toMatch(/#prompt\s*\{[^}]*color:\s*#fff4e4/s);
+  expect(css).toMatch(/#prompt\s*\{[^}]*color:\s*#f5f5f5/s);
   expect(css).toMatch(/#footer-links\s*\{[^}]*position:\s*fixed/s);
   expect(css).toMatch(
-    /#footer-links\s+a(?:\s*,\s*#footer-links\s+button)?\s*\{[^}]*color:\s*#fff4e4/s,
+    /#footer-links\s+a(?:\s*,\s*#footer-links\s+button)?\s*\{[^}]*color:\s*#d8d8d8/s,
   );
   expect(css).toMatch(
-    /#footer-links\s+a\s*,\s*#footer-links\s+button\s*\{[^}]*color:\s*#fff4e4/s,
+    /#footer-links\s+a\s*,\s*#footer-links\s+button\s*\{[^}]*color:\s*#d8d8d8/s,
   );
   expect(css).toMatch(/#footer-links\s+button\s*\{[^}]*background:\s*none/s);
 }
